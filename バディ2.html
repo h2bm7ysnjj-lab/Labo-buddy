@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Labo Buddy RC1.2.2</title>
+<title>Labo Buddy RC1.3 Core</title>
 <style>
 :root{--b:#2b7de9;--bg:#f4f7fb;--txt:#1f2937;--muted:#6b7280;--line:#d8e0ee;--green:#16a34a;--purple:#9333ea}
 *{box-sizing:border-box}
@@ -34,7 +34,7 @@ textarea{min-height:64px}.row{display:grid;grid-template-columns:1fr 1fr;gap:10p
 </style>
 </head>
 <body>
-<header><h1>🦷 Labo Buddy RC1</h1><p>RC1.2：Buddy Clear! 紙吹雪強化</p></header>
+<header><h1>🦷 Labo Buddy RC1</h1><p>RC1.3：コア料金を追加・医院別に自動反映</p></header>
 <main>
 <div id="clearBanner">🏆 Buddy Clear!<br>🎊 明日のセット準備OK！<br>本日もお疲れさまでした！</div>
 <button class="btn sub" id="moneyToggle" onclick="toggleMoney()">🙈 金額を隠す</button>
@@ -54,7 +54,7 @@ textarea{min-height:64px}.row{display:grid;grid-template-columns:1fr 1fr;gap:10p
 <div class="jaw">上顎　右 87654321｜12345678 左</div><div id="upper" class="toothRow"></div><div id="lower" class="toothRow"></div><div class="jaw">下顎　右 87654321｜12345678 左</div>
 <input id="teeth" placeholder="選択した部位が入ります"><p class="small" id="autoInfo">支台歯 0本 / ポンティック 0本</p></div>
 <div class="row"><div><label>区分</label><select id="category"><option>保険</option><option>自費</option></select></div><div><label>セット日</label><input id="dueDate" type="date"></div></div>
-<label>技工物</label><select id="workType" onchange="toggleShade();applyPrice();updateAutoInfo()"><option>前装冠</option><option>FMC</option><option>CAD/CAM冠</option><option>ハイブリッド</option><option>ジルコニア</option><option>インレー単純</option><option>インレー複雑</option><option>5分の4冠</option><option>アンレー</option><option>ポンティック</option></select>
+<label>技工物</label><select id="workType" onchange="toggleShade();applyPrice();updateAutoInfo()"><option>前装冠</option><option>FMC</option><option>CAD/CAM冠</option><option>ハイブリッド</option><option>ジルコニア</option><option>インレー単純</option><option>インレー複雑</option><option>5分の4冠</option><option>アンレー</option><option>コア</option><option>ポンティック</option></select>
 <label>形態</label><div class="segment"><label><input type="radio" name="kind" value="単冠" checked><span>単冠</span></label><label><input type="radio" name="kind" value="連結冠"><span>連結冠</span></label><label><input type="radio" name="kind" value="ブリッジ"><span>ブリッジ</span></label></div>
 <div id="shadeArea"><label>シェード</label><div class="shadeQuick"><button type="button" onclick="setShade('A1',this)">A1</button><button type="button" onclick="setShade('A2',this)">A2</button><button type="button" onclick="setShade('A3',this)">A3</button><button type="button" onclick="setShade('A3.5',this)">A3.5</button></div><details style="margin-top:8px"><summary>その他のシェード</summary><select id="shade" onchange="syncShadeButtons();toggleCustomShade()"><option></option><option>A1</option><option>A2</option><option>A3</option><option>A3.5</option><option>A4</option><option>B1</option><option>B2</option><option>C1</option><option>C2</option><option>D2</option><option>BL1</option><option>BL2</option><option>その他</option></select></details><input id="customShade" placeholder="その他のシェード" style="display:none"></div>
 <div class="row"><div><label>本数</label><input id="qty" type="number" min="1" value="1"></div><div><label>単価</label><input id="unitPrice" type="number" min="0"></div></div>
@@ -65,7 +65,7 @@ textarea{min-height:64px}.row{display:grid;grid-template-columns:1fr 1fr;gap:10p
 <div class="row3"><div><label>前装冠</label><input id="p前装冠" type="number"></div><div><label>FMC</label><input id="pFMC" type="number"></div><div><label>ポンティック</label><input id="pポンティック" type="number"></div></div>
 <div class="row3"><div><label>CAD/CAM冠</label><input id="pCAD" type="number"></div><div><label>ハイブリッド</label><input id="pハイブリッド" type="number"></div><div><label>ジルコニア</label><input id="pジルコニア" type="number"></div></div>
 <div class="row3"><div><label>インレー単純</label><input id="pインレー単純" type="number"></div><div><label>インレー複雑</label><input id="pインレー複雑" type="number"></div><div><label>5分の4冠</label><input id="p5分の4冠" type="number"></div></div>
-<label>アンレー</label><input id="pアンレー" type="number"><div class="actions"><button class="btn" onclick="saveClinic()">医院保存</button><button class="btn gray" onclick="clearClinicForm()">クリア</button></div><div id="clinicList"></div></div></section>
+<div class="row3"><div><label>アンレー</label><input id="pアンレー" type="number"></div><div><label>コア</label><input id="pコア" type="number"></div><div></div></div><div class="actions"><button class="btn" onclick="saveClinic()">医院保存</button><button class="btn gray" onclick="clearClinicForm()">クリア</button></div><div id="clinicList"></div></div></section>
 <section id="list" class="tab"><div class="card"><h2>📋 一覧</h2><input id="search" placeholder="医院名・患者名で検索" oninput="renderList()"><div id="caseList"></div></div></section>
 <section id="summary" class="tab"><div class="card"><h2>📊 集計</h2><div id="summaryBox"></div></div></section>
 </main>
@@ -74,7 +74,9 @@ textarea{min-height:64px}.row{display:grid;grid-template-columns:1fr 1fr;gap:10p
 <script>
 const CK='lb_rc1_cases', HK='lb_rc1_clinics';
 let cases=JSON.parse(localStorage.getItem(CK)||'[]'),clinics=JSON.parse(localStorage.getItem(HK)||'[]'),teethMap={},mode='base';
-if(!clinics.length){clinics=[{name:'サンプル歯科',favorite:true,prices:{'前装冠':5000,'FMC':4500,'ポンティック':3000,'CAD/CAM冠':4800,'ハイブリッド':5000,'ジルコニア':6000,'インレー単純':3500,'インレー複雑':4000,'5分の4冠':4500,'アンレー':4500}}];localStorage.setItem(HK,JSON.stringify(clinics))}
+if(!clinics.length){clinics=[{name:'サンプル歯科',favorite:true,prices:{'前装冠':5000,'FMC':4500,'ポンティック':3000,'CAD/CAM冠':4800,'ハイブリッド':5000,'ジルコニア':6000,'インレー単純':3500,'インレー複雑':4000,'5分の4冠':4500,'アンレー':4500,'コア':1500}}];localStorage.setItem(HK,JSON.stringify(clinics))}
+clinics.forEach(c=>{c.prices=c.prices||{}; if(c.prices['コア']===undefined)c.prices['コア']=0});
+localStorage.setItem(HK,JSON.stringify(clinics));
 const $=id=>document.getElementById(id),yen=n=>'¥'+Number(n||0).toLocaleString(),today=()=>new Date().toISOString().slice(0,10),tomorrow=()=>new Date(Date.now()+86400000).toISOString().slice(0,10);
 function esc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function save(){localStorage.setItem(CK,JSON.stringify(cases));renderAll()}function saveC(){localStorage.setItem(HK,JSON.stringify(clinics));renderClinicOptions();renderAll()}
@@ -95,14 +97,14 @@ function amount(c){return baseN(c)*Number(c.unitPrice||0)+ponticN(c)*pPrice(c)}
 function setKind(v){document.querySelectorAll('input[name=kind]').forEach(r=>r.checked=r.value===v)}function getKind(){return document.querySelector('input[name=kind]:checked').value}
 function updateAutoInfo(){let b=Object.values(teethMap).filter(v=>v==='base').length,p=Object.values(teethMap).filter(v=>v==='pontic').length;if(p>0)setKind('ブリッジ');else if(b>1)setKind('連結冠');else if(b===1)setKind('単冠');$('qty').value=Math.max(1,b||Number($('qty').value||1));$('autoInfo').textContent=`支台歯 ${b}本 / ポンティック ${p}本`}
 function setShade(v,btn){$('shade').value=v;document.querySelectorAll('.shadeQuick button').forEach(x=>x.classList.remove('sel'));btn.classList.add('sel')}function syncShadeButtons(){document.querySelectorAll('.shadeQuick button').forEach(x=>x.classList.toggle('sel',x.textContent===$('shade').value))}function toggleCustomShade(){$('customShade').style.display=$('shade').value==='その他'?'block':'none'}function shadeVal(){return $('shade').value==='その他'?$('customShade').value:$('shade').value}
-function toggleShade(){let no=['FMC','インレー単純','インレー複雑','5分の4冠','アンレー','ポンティック'];$('shadeArea').style.display=no.includes($('workType').value)?'none':'block'}
+function toggleShade(){let no=['FMC','インレー単純','インレー複雑','5分の4冠','アンレー','コア','ポンティック'];$('shadeArea').style.display=no.includes($('workType').value)?'none':'block'}
 function renderClinicOptions(){let cur=$('clinic')?.value||'';$('clinic').innerHTML=[...clinics].sort((a,b)=>(b.favorite?1:0)-(a.favorite?1:0)||a.name.localeCompare(b.name,'ja')).map(c=>`<option>${esc(c.name)}</option>`).join('');if(cur&&clinics.some(c=>c.name===cur))$('clinic').value=cur;applyPrice()}
 function applyPrice(){let c=clinics.find(x=>x.name===$('clinic').value);let v=c?.prices?.[$('workType').value];if(v!==undefined)$('unitPrice').value=v}
 function priceId(k){return k==='CAD/CAM冠'?'pCAD':'p'+k}
-function saveClinic(){if(!$('clinicName').value.trim())return alert('医院名を入れてね');let keys=['前装冠','FMC','ポンティック','CAD/CAM冠','ハイブリッド','ジルコニア','インレー単純','インレー複雑','5分の4冠','アンレー'];let prices={};keys.forEach(k=>prices[k]=Number($(priceId(k)).value||0));let data={name:$('clinicName').value.trim(),favorite:$('clinicFav').checked,prices};let i=clinics.findIndex(c=>c.name===data.name);i>=0?clinics[i]=data:clinics.push(data);clearClinicForm();saveC()}
+function saveClinic(){if(!$('clinicName').value.trim())return alert('医院名を入れてね');let keys=['前装冠','FMC','ポンティック','CAD/CAM冠','ハイブリッド','ジルコニア','インレー単純','インレー複雑','5分の4冠','アンレー','コア'];let prices={};keys.forEach(k=>prices[k]=Number($(priceId(k)).value||0));let data={name:$('clinicName').value.trim(),favorite:$('clinicFav').checked,prices};let i=clinics.findIndex(c=>c.name===data.name);i>=0?clinics[i]=data:clinics.push(data);clearClinicForm();saveC()}
 function editClinic(n){let c=clinics.find(x=>x.name===n);if(!c)return;$('clinicName').value=c.name;$('clinicFav').checked=!!c.favorite;Object.keys(c.prices).forEach(k=>{let el=$(priceId(k));if(el)el.value=c.prices[k]||''})}
 function clearClinicForm(){$('clinicName').value='';$('clinicFav').checked=false;document.querySelectorAll('#clinicsTab input[type=number]').forEach(i=>i.value='')}
-function renderClinics(){$('clinicList').innerHTML=clinics.map(c=>`<div class="item"><h3>${esc(c.name)} ${c.favorite?'<span class="pill">★</span>':''}</h3><p>前装冠 ${yen(c.prices['前装冠'])} / FMC ${yen(c.prices['FMC'])} / ポンティック ${yen(c.prices['ポンティック'])}</p><div class="actions"><button class="btn sub" onclick="editClinic('${esc(c.name)}')">編集</button><button class="btn danger" onclick="clinics=clinics.filter(x=>x.name!=='${esc(c.name)}');saveC()">削除</button></div></div>`).join('')}
+function renderClinics(){$('clinicList').innerHTML=clinics.map(c=>`<div class="item"><h3>${esc(c.name)} ${c.favorite?'<span class="pill">★</span>':''}</h3><p>前装冠 ${yen(c.prices['前装冠'])} / FMC ${yen(c.prices['FMC'])} / コア ${yen(c.prices['コア'])} / ポンティック ${yen(c.prices['ポンティック'])}</p><div class="actions"><button class="btn sub" onclick="editClinic('${esc(c.name)}')">編集</button><button class="btn danger" onclick="clinics=clinics.filter(x=>x.name!=='${esc(c.name)}');saveC()">削除</button></div></div>`).join('')}
 function saveCase(){if(!$('patient').value.trim())return alert('患者名を入れてね');let id=$('editId').value||Date.now().toString(36);let old=cases.find(c=>c.id===id);let data={id,clinic:$('clinic').value,patient:$('patient').value.trim(),category:$('category').value,dueDate:$('dueDate').value,workType:$('workType').value,kind:getKind(),teeth:$('teeth').value,teethData:{...teethMap},shade:shadeVal(),qty:Number($('qty').value||1),unitPrice:Number($('unitPrice').value||0),metal:$('metal').value,memo:$('memo').value,status:old?.status||'未着手',createdAt:old?.createdAt||new Date().toISOString()};let i=cases.findIndex(c=>c.id===id);i>=0?cases[i]=data:cases.push(data);save();resetForm();show('list',document.querySelectorAll('.nav button')[3])}
 function resetForm(){$('editId').value='';$('formTitle').textContent='➕ 患者登録';$('patient').value='';$('dueDate').value='';$('workType').value='前装冠';setKind('単冠');clearTeeth();$('shade').value='';$('customShade').value='';$('customShade').style.display='none';document.querySelectorAll('.shadeQuick button').forEach(x=>x.classList.remove('sel'));$('qty').value=1;$('unitPrice').value='';$('metal').value='なし';$('memo').value='';toggleShade();applyPrice()}
 function editCase(id){let c=cases.find(x=>x.id===id);if(!c)return;$('editId').value=id;$('formTitle').textContent='✏️ 編集';$('clinic').value=c.clinic;$('patient').value=c.patient;$('category').value=c.category;$('dueDate').value=c.dueDate;$('workType').value=c.workType;setKind(c.kind);teethMap=c.teethData||{};paintTeeth();$('shade').value=c.shade||'';syncShadeButtons();$('qty').value=c.qty;$('unitPrice').value=c.unitPrice;$('metal').value=c.metal;$('memo').value=c.memo||'';toggleShade();show('form',document.querySelectorAll('.nav button')[1])}
