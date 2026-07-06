@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" sizes="512x512" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
-<title>Labo Buddy RC14.6 同期修正版</title>
+<title>Labo Buddy RC14.4 安定版</title>
 <style>
 :root{--b:#2b7de9;--bg:#f4f7fb;--txt:#1f2937;--muted:#6b7280;--line:#d8e0ee;--green:#16a34a;--purple:#9333ea;--done:#eef0f3}
 *{box-sizing:border-box}
@@ -214,7 +214,7 @@ body.theme-dark .nav{background:#111827}
   </div>
   <button class="splashSkip" type="button" onclick="closeSplash();event.stopPropagation()">スキップ</button>
 </div>
-<header><h1>🦷 Labo Buddy RC14.6</h1><p>今日の納品進捗と休日も安心のホーム</p><button class="gearBtn" type="button" onclick="openSettings()" aria-label="設定">⚙️</button></header>
+<header><h1>🦷 Labo Buddy RC6.2</h1><p>今日の納品進捗と休日も安心のホーム</p><button class="gearBtn" type="button" onclick="openSettings()" aria-label="設定">⚙️</button></header>
 <main><section id="todayProgressCard" class="todayProgress"><h2>📅 今日の納品</h2><div id="todayProgressCount" class="todayProgressCount">0 / 0 完了</div><div class="progressBar"><div id="progressFill" class="progressFill"></div></div><div id="progressRemain" class="progressText">今日の納品を確認しましょう</div></section>
 <div id="clearBanner" style="display:none"></div>
 
@@ -3532,59 +3532,107 @@ modes:["やさしい","熱血","落ち着き","ユーモア","おまかせ"]
 
 
 <script>
-/* RC14.6 同期修正：実ID対応＋完成履歴と未完成表示の完全同期 */
+/* RC14.7 最終同期パッチ
+   - 完成一覧・完了カウンター・ホーム・カレンダーを同じ統合データで再計算
+   - RC14.4 の進捗IDずれ（todayProgressCard/progressFill/progressRemain）を修正
+*/
 (function(){
   const CASE_KEY='lb_rc1_cases';
   const DONE_KEY='lb_rc96_done_history';
-  const MARK_TEXT='RC14.6 同期修正版';
-  try{document.title='Labo Buddy RC14.6 同期修正版';}catch(_){ }
-  function $(id){return document.getElementById(id)}
-  function arr(v){return Array.isArray(v)?v:[]}
-  function read(k,f){try{const v=JSON.parse(localStorage.getItem(k)||'null');return v==null?f:v}catch(_){return f}}
-  function write(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){console.error(e);return false}}
-  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-  function today(){const d=new Date();d.setHours(0,0,0,0);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-  function addDays(n){const d=new Date(today()+'T00:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-  function diff(d){if(!d)return null;return Math.round((new Date(d+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000)}
-  function yen(n){return '¥'+Number(n||0).toLocaleString('ja-JP')}
-  function casesNow(){let a=arr(read(CASE_KEY,[]));try{if(Array.isArray(window.cases)&&window.cases.length>a.length)a=window.cases}catch(_){ }try{window.cases=a;cases=a}catch(_){ }return a}
-  function commit(a){a=arr(a);try{window.cases=a;cases=a}catch(_){ }write(CASE_KEY,a)}
-  function isDone(c){const s=String((c&&c.status)||'').trim().toLowerCase();return s==='完了'||s==='完成'||s==='done'||!!(c&&c.completedAt)||!!(c&&c.doneAt)||!!(c&&c.finishedAt)}
-  function doneDate(c){return (c&&(c.completedAt||c.doneAt||c.finishedAt||c.updatedAt||c.createdAt))||new Date().toISOString()}
-  function makeOpen(c){if(!c)return c;c.status=c.status==='未着手'?'未着手':'作業中';delete c.completedAt;delete c.doneAt;delete c.finishedAt;return c}
-  function price(c){try{if(typeof amount==='function')return amount(c)}catch(_){ }return Number(c&&c.unitPrice||0)*Number(c&&c.qty||1)}
-  function ccolor(name){try{const cs=Array.isArray(window.clinics)?window.clinics:(Array.isArray(clinics)?clinics:[]);const x=cs.find(v=>String(v&&v.name)===String(name));return (x&&x.color)||'#2b7de9'}catch(_){return '#2b7de9'}}
-  function syncDone(){
+  const MARK_TEXT='RC14.7 最終同期版';
+  try{ document.title='Labo Buddy RC14.7 最終同期版'; }catch(_){ }
+  function $(id){return document.getElementById(id);}
+  function arr(v){return Array.isArray(v)?v:[];}
+  function readJson(k,f){try{const raw=localStorage.getItem(k); if(!raw)return f; const v=JSON.parse(raw); return v==null?f:v;}catch(_){return f;}}
+  function writeJson(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){console.error('RC14.7 save failed',k,e);}}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m];});}
+  function dateOnly(v){const m=String(v||'').match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:'';}
+  function todayStr(){try{if(typeof today==='function')return today();}catch(_){ } const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  function tomorrowStr(){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()+1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+  function diffDays(ds){ds=dateOnly(ds); if(!ds)return null; const a=new Date(todayStr()+'T00:00:00'), b=new Date(ds+'T00:00:00'); return Math.round((b-a)/86400000);}
+  function doneLike(c){const s=String((c&&c.status)||'').trim().toLowerCase();return s==='完了'||s==='完成'||s==='done'||!!(c&&c.completedAt)||!!(c&&c.doneAt)||!!(c&&c.finishedAt);}
+  function doneAt(c){return (c&&(c.completedAt||c.doneAt||c.finishedAt||c.updatedAt||c.createdAt))||new Date().toISOString();}
+  function price(c){try{if(typeof amount==='function')return amount(c);}catch(_){ }return Number(c&&c.unitPrice||0)*Number(c&&c.qty||1);}
+  function yen(n){try{return '¥'+Number(n||0).toLocaleString('ja-JP');}catch(_){return '¥0';}}
+  function color(n){try{if(typeof clinicColor==='function')return clinicColor(n)||'#2b7de9';}catch(_){ }return '#2b7de9';}
+  function soft(n){try{if(typeof softClinicColor==='function')return softClinicColor(n)||'#fff';}catch(_){ }return '#fff';}
+  function border(n){try{if(typeof clinicBorderColor==='function')return clinicBorderColor(n)||'#d8e0ee';}catch(_){ }return '#d8e0ee';}
+  function mergeCases(){
     const by={};
-    arr(read(DONE_KEY,[])).forEach(c=>{if(c&&c.id&&isDone(c))by[String(c.id)]=Object.assign({},c,{status:'完了',completedAt:doneDate(c)})});
-    casesNow().forEach(c=>{if(!c||!c.id)return;const id=String(c.id); if(isDone(c))by[id]=Object.assign({},by[id]||{},c,{status:'完了',completedAt:doneDate(c)}); else delete by[id];});
-    const out=Object.values(by).sort((a,b)=>String(doneDate(b)).localeCompare(String(doneDate(a))));
-    write(DONE_KEY,out); return out;
+    function add(c,rank){ if(!c)return; const id=String(c.id||('noid_'+(c.patient||'')+'_'+(c.dueDate||'')+'_'+(c.createdAt||''))); if(!id)return; const fixed=Object.assign({},c,{id:id}); const old=by[id]; const oldRank=old?old.__rank:-1; const newer=!old||String(doneAt(fixed))>=String(doneAt(old)); if(!old||rank>oldRank||(rank===oldRank&&newer)) by[id]=Object.assign(fixed,{__rank:rank}); }
+    arr(readJson(CASE_KEY,[])).forEach(c=>add(c,2));
+    try{ if(Array.isArray(window.cases)) window.cases.forEach(c=>add(c,1)); }catch(_){ }
+    try{ if(typeof cases!=='undefined'&&Array.isArray(cases)) cases.forEach(c=>add(c,1)); }catch(_){ }
+    arr(readJson(DONE_KEY,[])).forEach(c=>add(Object.assign({},c,{status:'完了',completedAt:doneAt(c)}),3));
+    const list=Object.values(by).map(c=>{delete c.__rank; return c;});
+    try{window.cases=list;}catch(_){ } try{cases=list;}catch(_){ }
+    writeJson(CASE_KEY,list);
+    return list;
   }
-  function badge(d){const x=diff(d); if(x===null)return''; if(x<0)return'<span class="due over">'+(-x)+'日超過</span>'; if(x===0)return'<span class="due todayDue">今日</span>'; if(x===1)return'<span class="due tomorrow">明日</span>'; if(x<=3)return'<span class="due soon">あと'+x+'日</span>'; return'<span class="due later">あと'+x+'日</span>'}
-  function openCard(c){const col=ccolor(c.clinic);return '<div class="item caseCard" data-id="'+esc(c.id)+'"><div class="swipeHint">✅ 完了</div><div class="clinicColorBar" style="background:'+esc(col)+'"></div><div class="itemInner"><div class="caseHead"><h3>'+esc(c.patient||'患者名未入力')+'</h3><div class="caseBadges"><span class="pill" style="background:'+esc(col)+';color:#fff">'+esc(c.clinic||'医院未入力')+'</span>'+badge(c.dueDate)+(c.dueDate?'<span class="pill">'+esc(c.dueDate)+'</span>':'')+(c.dueTime?'<span class="pill">'+esc(c.dueTime)+'</span>':'')+'</div></div><p>'+esc(c.workType||c.kind||'技工物')+' / '+esc(c.teeth||'部位未入力')+'</p><p><span class="money">'+yen(price(c))+'</span></p><div class="actions"><button type="button" class="btn sub" data-act="start" data-id="'+esc(c.id)+'">着手</button><button type="button" class="btn sub" data-act="edit" data-id="'+esc(c.id)+'">編集</button><button type="button" class="btn" data-act="complete" data-id="'+esc(c.id)+'">✅完了</button><button type="button" class="btn danger" data-act="delete" data-id="'+esc(c.id)+'">削除</button></div></div></div>'}
-  function doneCard(c){const col=ccolor(c.clinic);return '<div class="item caseCard done" data-id="'+esc(c.id)+'"><div class="clinicColorBar" style="background:'+esc(col)+'"></div><div class="itemInner"><h3>'+esc(c.patient||'患者名未入力')+'</h3><p><span class="pill" style="background:'+esc(col)+';color:#fff">'+esc(c.clinic||'医院未入力')+'</span> <span class="pill">完了日 '+esc(String(doneDate(c)).slice(0,10))+'</span></p><p>'+esc(c.workType||c.kind||'技工物')+' / '+esc(c.teeth||'部位未入力')+'</p><p><span class="money">'+yen(price(c))+'</span></p><div class="actions"><button type="button" class="btn gray" data-act="undo" data-id="'+esc(c.id)+'">↩️未完成へ戻す</button></div></div></div>'}
-  function repaintProgress(){
-    const card=$('todayProgressCard'), count=$('todayProgressCount'), fill=$('progressFill'), text=$('progressRemain'); if(!card||!count||!fill||!text)return;
-    const td=today(), all=casesNow().filter(c=>c&&c.dueDate===td), done=all.filter(isDone).length, total=all.length, remain=total-done;
+  function doneList(){
+    const list=mergeCases().filter(doneLike).map(c=>Object.assign({},c,{status:'完了',completedAt:doneAt(c)}));
+    const by={}; list.forEach(c=>{by[String(c.id)]=c;});
+    const out=Object.values(by).sort((a,b)=>String(doneAt(b)).localeCompare(String(doneAt(a))));
+    writeJson(DONE_KEY,out);
+    return out;
+  }
+  function openList(){return mergeCases().filter(c=>c&&!doneLike(c));}
+  function commit(list){try{window.cases=arr(list);}catch(_){ } try{cases=arr(list);}catch(_){ } writeJson(CASE_KEY,arr(list)); doneList();}
+
+  function openCard(c){const cc=color(c.clinic),bg=soft(c.clinic),bd=border(c.clinic);const due=c.dueDate?'<span class="pill">'+esc(c.dueDate)+'</span>':'';const time=c.dueTime?'<span class="pill">'+esc(c.dueTime)+'</span>':'';return '<div class="item caseCard" style="background:'+esc(bg)+';border-color:'+esc(bd)+'" data-id="'+esc(c.id)+'"><div class="swipeHint">✅ 完了</div><div class="clinicColorBar" style="background:'+esc(cc)+'"></div><div class="itemInner"><div class="caseHead"><h3>'+esc(c.patient||'患者名未入力')+'</h3><div class="caseBadges"><span class="pill" style="background:'+esc(cc)+';color:#fff">'+esc(c.clinic||'医院未入力')+'</span> '+due+' '+time+'</div></div><p>'+esc(c.workType||c.kind||'技工物')+' / '+esc(c.teeth||'部位未入力')+'</p><p><span class="money">'+yen(price(c))+'</span></p><div class="actions"><button type="button" class="btn sub" data-act="start" data-id="'+esc(c.id)+'">着手</button><button type="button" class="btn sub" data-act="edit" data-id="'+esc(c.id)+'">編集</button><button type="button" class="btn" data-act="complete" data-id="'+esc(c.id)+'">✅完了</button><button type="button" class="btn danger" data-act="delete" data-id="'+esc(c.id)+'">削除</button></div></div></div>';}
+  function doneCard(c){const done=dateOnly(doneAt(c))?'完了日：'+dateOnly(doneAt(c)):'完了済み';const due=c.dueDate?'納期：'+esc(c.dueDate)+(c.dueTime?' '+esc(c.dueTime):''):'納期未設定';return '<div class="item done caseCard" style="border-color:#bbf7d0;background:#f0fdf4"><div class="itemInner"><div class="caseHead"><h3>'+esc(c.patient||'患者名未入力')+'</h3><div class="caseBadges"><span class="statusBadge st2">完了</span><span class="pill">'+esc(c.clinic||'医院未入力')+'</span><span class="pill">'+esc(done)+'</span></div></div><p>'+esc(c.workType||c.kind||'技工物')+' / '+esc(c.teeth||'部位未入力')+'</p><p>'+due+' <span class="money">'+yen(price(c))+'</span></p><div class="actions"><button type="button" class="btn gray" data-act="undo" data-id="'+esc(c.id)+'">↩️ 未完成へ戻す</button></div></div></div>';}
+
+  window.renderList=function(){const box=$('caseList'); if(!box)return; const q=String(($('search')||{}).value||'').toLowerCase(); let list=openList().filter(c=>String((c.clinic||'')+(c.patient||'')+(c.workType||'')+(c.kind||'')+(c.teeth||'')+(c.memo||'')).toLowerCase().includes(q)); list.sort((a,b)=>String(a.dueDate||'9999-99-99').localeCompare(String(b.dueDate||'9999-99-99'))||String(a.dueTime||'').localeCompare(String(b.dueTime||''))||String(a.clinic||'').localeCompare(String(b.clinic||''),'ja')); box.innerHTML=list.length?list.map(openCard).join(''):'<div class="empty">未完成の技工物はありません</div>'; try{if(typeof attachSwipe==='function')attachSwipe();}catch(_){ }};
+  try{renderList=window.renderList;}catch(_){ }
+  window.renderDone=function(){const box=$('doneList'); if(!box)return; const list=doneList(); box.innerHTML=list.length?'<p class="muted">完了にした仕事はここに残ります。現在 '+list.length+' 件です。</p>'+list.map(doneCard).join(''):'<div class="empty">完成済みはまだありません</div>';};
+  try{renderDone=window.renderDone;}catch(_){ }
+  window.showCalDay=function(ds){const box=$('calDayList'); if(!box)return; const list=openList().filter(c=>dateOnly(c.dueDate)===ds).sort((a,b)=>String(a.dueTime||'').localeCompare(String(b.dueTime||''))||String(a.clinic||'').localeCompare(String(b.clinic||''),'ja')); const d=new Date(ds+'T00:00:00'); const w=['日','月','火','水','木','金','土'][d.getDay()]||''; box.innerHTML='<h3>📌 '+(d.getMonth()+1)+'月'+d.getDate()+'日（'+w+'） の仕事</h3>'+(list.length?list.map(c=>'<div class="miniCase clinicMini" style="--clinic-color:'+esc(color(c.clinic))+';background:'+esc(soft(c.clinic))+';border-color:'+esc(border(c.clinic))+'"><span class="miniClinicPill" style="background:'+esc(color(c.clinic))+'">'+esc(c.clinic||'医院未入力')+'</span><b>'+esc(c.patient||'患者名未入力')+'</b><div class="meta">'+esc(c.workType||c.kind||'技工物')+' / '+esc(c.teeth||'部位未入力')+(c.dueTime?' / '+esc(c.dueTime):'')+'</div></div>').join(''):'<div class="empty">この日の未完成はありません</div>');};
+  try{showCalDay=window.showCalDay;}catch(_){ }
+  window.renderCal=function(){const grid=$('calGrid'),title=$('calTitle'); if(!grid||!title)return; const d=new Date(), y=d.getFullYear(), m=d.getMonth(), td=todayStr(), tm=tomorrowStr(); title.innerHTML='📅 '+y+'年'+(m+1)+'月 <span class="homeCalMini">日付タップで一覧</span>'; const first=new Date(y,m,1).getDay(), last=new Date(y,m+1,0).getDate(), open=openList(); let h=''; for(let i=0;i<first;i++)h+='<div class="day"></div>'; for(let day=1;day<=last;day++){const ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0'); const list=open.filter(c=>dateOnly(c.dueDate)===ds); const cls=[]; if(ds===td)cls.push('today'); if(list.length)cls.push('hasDue'); if(ds===td&&list.length)cls.push('todayDue'); else if(ds===tm&&list.length)cls.push('tomorrowDue'); let badges='',dots=''; if(list.length){const bcls=ds===td?'todayB':(ds===tm?'tomorrowB':'dueB'); badges='<div class="calBadges"><span class="calBadge '+bcls+'">'+list.length+'</span></div>'; const cs=[...new Set(list.map(c=>color(c.clinic)))].slice(0,4); dots='<div class="clinicDots">'+cs.map(x=>'<span class="clinicDot" style="background:'+esc(x)+'"></span>').join('')+'</div>';} h+='<div class="day '+cls.join(' ')+'" onclick="showCalDay(\''+ds+'\')"><span class="calDayNum">'+day+'</span>'+badges+dots+'</div>'; } grid.innerHTML=h; window.showCalDay(td);};
+  try{renderCal=window.renderCal;}catch(_){ }
+  window.updateTodayProgress=function(){
+    const card=$('todayProgressCard')||$('todayProgress');
+    const count=$('todayProgressCount');
+    const fill=$('progressFill')||$('todayProgressFill');
+    const text=$('progressRemain')||$('todayProgressText');
+    if(!card||!count||!fill||!text)return;
+    const td=todayStr(); const all=mergeCases(); const due=all.filter(c=>dateOnly(c.dueDate)===td); const done=due.filter(doneLike).length; const total=due.length; const remain=total-done;
     card.classList.toggle('rest',total===0); card.classList.toggle('doneDay',total>0&&remain===0);
-    count.textContent=done+' / '+total+' 完了'; fill.style.width=(total?Math.round(done/total*100):0)+'%';
-    text.textContent=total===0?'🌿 今日の納品予定はありません':(remain===0?'🎉 今日の納品は完了です':'あと '+remain+' 件です');
-  }
-  window.updateTodayProgress=repaintProgress; try{updateTodayProgress=window.updateTodayProgress}catch(_){ }
-  window.renderList=function(){const box=$('caseList'); if(!box)return; const q=String(($('search')||{}).value||'').toLowerCase(); const list=casesNow().filter(c=>c&&!isDone(c)).filter(c=>String((c.clinic||'')+(c.patient||'')+(c.workType||'')+(c.kind||'')+(c.teeth||'')).toLowerCase().includes(q)).sort((a,b)=>String(a.dueDate||'9999-99-99').localeCompare(String(b.dueDate||'9999-99-99'))||String(a.dueTime||'').localeCompare(String(b.dueTime||''))); box.innerHTML=list.length?list.map(openCard).join(''):'<div class="empty">未完成の技工物はありません</div>'; try{if(typeof attachSwipe==='function')attachSwipe()}catch(_){ }}; try{renderList=window.renderList}catch(_){ }
-  window.renderDone=function(){const box=$('doneList'); if(!box)return; const list=syncDone(); box.innerHTML=list.length?'<p class="muted">完成一覧：'+list.length+'件</p>'+list.map(doneCard).join(''):'<div class="empty">完成済みはまだありません</div>'}; try{renderDone=window.renderDone}catch(_){ }
-  window.showCalDay=function(ds){const box=$('calDayList'); if(!box)return; const list=casesNow().filter(c=>c&&c.dueDate===ds&&!isDone(c)).sort((a,b)=>String(a.dueTime||'').localeCompare(String(b.dueTime||''))); const d=new Date(ds+'T00:00:00'), w=['日','月','火','水','木','金','土'][d.getDay()]||''; box.innerHTML='<h3>📌 '+(d.getMonth()+1)+'月'+d.getDate()+'日（'+w+'） の仕事</h3>'+(list.length?list.map(c=>'<div class="miniCase"><b>'+esc(c.clinic||'医院未入力')+'　'+esc(c.patient||'患者名未入力')+'</b><div class="meta">'+esc(c.workType||c.kind||'技工物')+' / '+esc(c.teeth||'部位未入力')+(c.dueTime?' / '+esc(c.dueTime):'')+'</div></div>').join(''):'<div class="empty">この日の未完成はありません</div>')}; try{showCalDay=window.showCalDay}catch(_){ }
-  window.renderCal=function(){const grid=$('calGrid'), title=$('calTitle'); if(!grid||!title)return; const now=new Date(), y=now.getFullYear(), m=now.getMonth(), td=today(), tm=addDays(1); title.innerHTML='📅 '+y+'年'+(m+1)+'月 <span class="homeCalMini">日付タップで一覧</span>'; const first=new Date(y,m,1).getDay(), last=new Date(y,m+1,0).getDate(); const open=casesNow().filter(c=>c&&!isDone(c)); let h=''; for(let i=0;i<first;i++)h+='<div class="day"></div>'; for(let day=1;day<=last;day++){const ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0'); const list=open.filter(c=>c.dueDate===ds); const cls=[]; if(ds===td)cls.push('today'); if(list.length)cls.push('hasDue'); if(ds===td&&list.length)cls.push('todayDue'); else if(ds===tm&&list.length)cls.push('tomorrowDue'); h+='<div class="day '+cls.join(' ')+'" data-date="'+ds+'" onclick="showCalDay(\''+ds+'\')"><span class="calDayNum">'+day+'</span>'+(list.length?'<div class="calBadges"><span class="calBadge '+(ds===td?'todayB':ds===tm?'tomorrowB':'dueB')+'">'+list.length+'</span></div>':'')+'</div>'} grid.innerHTML=h; window.showCalDay(td)}; try{renderCal=window.renderCal}catch(_){ }
-  window.renderHome=function(){const all=casesNow(), open=all.filter(c=>c&&!isDone(c)), td=today(), tm=addDays(1), todayOpen=open.filter(c=>c.dueDate===td), todayAll=all.filter(c=>c.dueDate===td), todayDone=todayAll.filter(isDone), tomorrowOpen=open.filter(c=>c.dueDate===tm), future=open.filter(c=>{const x=diff(c.dueDate);return x!==null&&x>=2}); if($('dashDate')){const d=new Date();$('dashDate').innerHTML='<span class="dashTodayBig">今日</span><br><strong>'+d.getDate()+'</strong><br>'+d.getFullYear()+'年'+(d.getMonth()+1)+'月 / '+['日','月','火','水','木','金','土'][d.getDay()]+'曜日'} if($('todayDashCount'))$('todayDashCount').textContent=todayOpen.length; if($('todayConfirmCount'))$('todayConfirmCount').textContent=todayDone.length+' / '+todayAll.length; if($('tomorrowCount'))$('tomorrowCount').textContent=tomorrowOpen.length; if($('futureCount'))$('futureCount').textContent=future.length; if($('doneCount'))$('doneCount').textContent=syncDone().length; if($('dashMessage'))$('dashMessage').textContent=todayOpen.length?'🔴 本日必須が '+todayOpen.length+'件。今日はここから。':(tomorrowOpen.length?'🟠 明日納品が '+tomorrowOpen.length+'件。今日のうちに形にしておこう。':(future.length?'🟡 明後日以降が '+future.length+'件。余裕があれば少し進めよう。':'未完成はありません。最高の相棒、待機中です。')); try{if(typeof renderDirective==='function')renderDirective(open,typeof metalAlertItems==='function'?metalAlertItems():[])}catch(_){ } repaintProgress(); window.renderCal();}; try{renderHome=window.renderHome}catch(_){ }
-  function repaint(){syncDone();window.renderHome();window.renderList();window.renderDone();try{if(typeof renderSummary==='function')renderSummary()}catch(_){ }try{if(typeof renderMetal==='function')renderMetal()}catch(_){ }}
-  window.renderAll=repaint; try{renderAll=window.renderAll}catch(_){ }
-  window.completeCase=function(id,el){const list=casesNow(); const c=list.find(x=>String(x&&x.id)===String(id)); if(!c)return; c.status='完了'; c.completedAt=new Date().toISOString(); delete c.doneAt; delete c.finishedAt; commit(list); try{if(typeof showToast==='function')showToast('✅ '+(c.patient||'患者')+' を完了にしました')}catch(_){ } try{if(typeof completeFlash==='function')completeFlash(c)}catch(_){ } setTimeout(repaint,50)}; try{completeCase=window.completeCase}catch(_){ }
-  window.cycleStatus=function(id){const list=casesNow(); const c=list.find(x=>String(x&&x.id)===String(id)); if(!c)return; if(isDone(c))makeOpen(c); else c.status='作業中'; commit(list); repaint()}; try{cycleStatus=window.cycleStatus}catch(_){ }
-  window.rc146UndoDone=function(id){const list=casesNow(); const c=list.find(x=>String(x&&x.id)===String(id)); if(c){makeOpen(c); commit(list)} write(DONE_KEY,arr(read(DONE_KEY,[])).filter(x=>String(x&&x.id)!==String(id))); repaint()};
-  window.rc144UndoDone=window.rc146UndoDone; window.rc143UndoDone=window.rc146UndoDone; window.rc14UndoDone=window.rc146UndoDone;
-  document.addEventListener('click',function(e){const btn=e.target.closest('[data-act][data-id]'); if(!btn)return; e.preventDefault(); e.stopPropagation(); const id=btn.getAttribute('data-id'), act=btn.getAttribute('data-act'); if(act==='edit'){try{editCase(id)}catch(err){console.error(err)}} else if(act==='start')window.cycleStatus(id); else if(act==='complete')window.completeCase(id,btn.closest('.item')); else if(act==='undo')window.rc146UndoDone(id); else if(act==='delete'){try{if(confirm('削除しますか？'))del(id)}catch(_){ }}},true);
-  window.addEventListener('DOMContentLoaded',function(){setTimeout(function(){repaint(); ['rc144VersionMark','rc145VersionMark','rc146VersionMark'].forEach(id=>{const e=$(id);if(e)e.remove()}); const v=document.createElement('div'); v.id='rc146VersionMark'; v.textContent=MARK_TEXT; v.style.cssText='position:fixed;right:10px;bottom:72px;z-index:9999;background:rgba(255,255,255,.96);border:1px solid rgba(0,0,0,.12);border-radius:999px;padding:5px 9px;font-size:11px;color:#555;box-shadow:0 3px 12px rgba(0,0,0,.08);pointer-events:none;'; document.body.appendChild(v)},2100)});
+    count.textContent=done+' / '+total+' 完了'; fill.style.width=(total?(done/total*100):0)+'%';
+    text.textContent=total===0?'🌿 今日は納品予定なし。赤バーはお休みです😊':(remain===0?'🎉 今日の納品完了！お疲れさまでした':'あと '+remain+' 件です');
+  };
+  try{updateTodayProgress=window.updateTodayProgress;}catch(_){ }
+  window.renderHome=function(){
+    const td=todayStr(), tm=tomorrowStr(); const all=mergeCases(), done=doneList(), open=all.filter(c=>!doneLike(c)); const todayOpen=open.filter(c=>dateOnly(c.dueDate)===td); const todayAll=all.filter(c=>dateOnly(c.dueDate)===td); const todayDone=todayAll.filter(doneLike); const tomorrowOpen=open.filter(c=>dateOnly(c.dueDate)===tm); const future=open.filter(c=>{const x=diffDays(c.dueDate);return x!==null&&x>=2;});
+    if($('dashDate')){const d=new Date();$('dashDate').innerHTML='<span class="dashTodayBig">今日</span><br><strong>'+d.getDate()+'</strong><br>'+d.getFullYear()+'年'+(d.getMonth()+1)+'月 / '+['日','月','火','水','木','金','土'][d.getDay()]+'曜日';}
+    if($('todayDashCount'))$('todayDashCount').textContent=todayOpen.length;
+    if($('todayConfirmCount'))$('todayConfirmCount').textContent=todayDone.length+' / '+todayAll.length;
+    if($('tomorrowCount'))$('tomorrowCount').textContent=tomorrowOpen.length;
+    if($('futureCount'))$('futureCount').textContent=future.length;
+    if($('activeCount'))$('activeCount').textContent=open.length;
+    if($('doneCount'))$('doneCount').textContent=done.length;
+    if($('monthSales')){const m=td.slice(0,7); const sales=done.filter(c=>!c.excludeSummary&&String(c.completedAt||c.dueDate||'').slice(0,7)===m).reduce((s,c)=>s+price(c),0); $('monthSales').textContent=yen(sales);}
+    if($('dashMessage'))$('dashMessage').textContent=todayOpen.length?'🔴 本日必須が '+todayOpen.length+'件。今日はここから。':(tomorrowOpen.length?'🟠 明日納品が '+tomorrowOpen.length+'件。今日のうちに形にしておこう。':(future.length?'🟡 明後日以降が '+future.length+'件。余裕があれば少し進めよう。':'未完成はありません。最高の相棒、待機中です。'));
+    try{if(typeof renderDirective==='function')renderDirective(open,typeof metalAlertItems==='function'?metalAlertItems():[]);}catch(_){ }
+    window.updateTodayProgress(); window.renderCal();
+  };
+  try{renderHome=window.renderHome;}catch(_){ }
+  function repaint(){window.renderHome();window.renderList();window.renderDone();try{if(typeof renderSummary==='function')renderSummary();}catch(_){ }try{if(typeof renderMetal==='function')renderMetal();}catch(_){ }try{if(typeof renderOutsources==='function')renderOutsources();}catch(_){ }}
+  window.renderAll=repaint; try{renderAll=window.renderAll;}catch(_){ }
+  window.completeCase=function(id,el){const list=mergeCases(); const c=list.find(x=>String(x&&x.id)===String(id)); if(!c)return; c.status='完了'; c.completedAt=new Date().toISOString(); delete c.doneAt; delete c.finishedAt; commit(list); try{if(el){el.classList.remove('swiping');el.classList.add('done','finishing');}}catch(_){ } try{if(typeof showToast==='function')showToast('✅ '+(c.patient||'患者')+' を完了にしました');}catch(_){ } try{if(typeof completeFlash==='function')completeFlash(c);}catch(_){ } setTimeout(repaint,60);};
+  try{completeCase=window.completeCase;}catch(_){ }
+  window.rc147UndoDone=function(id){const list=mergeCases(); const c=list.find(x=>String(x&&x.id)===String(id)); if(!c)return; c.status='作業中'; delete c.completedAt; delete c.doneAt; delete c.finishedAt; commit(list); writeJson(DONE_KEY,arr(readJson(DONE_KEY,[])).filter(x=>String(x&&x.id)!==String(id))); repaint(); try{if(typeof showToast==='function')showToast('↩️ '+(c.patient||'患者')+' を未完成へ戻しました');}catch(_){ }};
+  window.rc144UndoDone=window.rc143UndoDone=window.rc14UndoDone=window.rc142MoveToUnfinished=window.rc147UndoDone;
+  window.cycleStatus=function(id){const list=mergeCases(); const c=list.find(x=>String(x&&x.id)===String(id)); if(!c)return; if(doneLike(c)) window.rc147UndoDone(id); else {c.status='作業中'; commit(list); repaint(); try{if(typeof showToast==='function')showToast('🟠 '+(c.patient||'患者')+' を作業中にしました');}catch(_){ }} };
+  try{cycleStatus=window.cycleStatus;}catch(_){ }
+  const oldShow=window.show;
+  window.show=function(id,b){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); const target=$(id); if(target)target.classList.add('active'); document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active')); if(b)b.classList.add('active'); repaint(); try{scrollTo(0,0);}catch(_){ }};
+  try{show=window.show;}catch(_){ }
+  document.addEventListener('click',function(e){const btn=e.target.closest('[data-act][data-id]'); if(!btn)return; e.preventDefault(); e.stopPropagation(); const id=btn.getAttribute('data-id'), act=btn.getAttribute('data-act'); if(act==='edit'){try{editCase(id);}catch(err){console.error(err);alert('編集を開けませんでした');}} else if(act==='start'){window.cycleStatus(id);} else if(act==='complete'){window.completeCase(id,btn.closest('.item'));} else if(act==='undo'){window.rc147UndoDone(id);} else if(act==='delete'){try{if(confirm('削除しますか？'))del(id);}catch(_){ }}},true);
+  window.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+    if(!document.getElementById('rc147Css')){const st=document.createElement('style');st.id='rc147Css';st.textContent='.miniCase.clinicMini{position:relative;overflow:hidden;padding-left:20px!important;border-width:2px!important}.miniCase.clinicMini:before{content:"";position:absolute;left:0;top:0;bottom:0;width:10px;background:var(--clinic-color,#2b7de9)}.miniClinicPill{display:inline-block;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:950;color:#fff;margin:0 0 4px;background:var(--clinic-color,#2b7de9)}';document.head.appendChild(st);}
+    repaint(); ['rc140VersionMark','rc141VersionMark','rc142VersionMark','rc143VersionMark','rc144VersionMark','rc147VersionMark'].forEach(id=>{const e=$(id);if(e)e.remove();}); const v=document.createElement('div'); v.id='rc147VersionMark'; v.textContent=MARK_TEXT; v.style.cssText='position:fixed;right:10px;bottom:72px;z-index:9999;background:rgba(255,255,255,.96);border:1px solid rgba(0,0,0,.12);border-radius:999px;padding:5px 9px;font-size:11px;color:#555;box-shadow:0 3px 12px rgba(0,0,0,.08);pointer-events:none;'; document.body.appendChild(v);
+  },2200);});
 })();
 </script>
 
