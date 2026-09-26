@@ -3208,12 +3208,12 @@ initCelebrateMode();applySettingsUI();makeTeeth();ensureWorkSelect();renderClini
   function init(){
     try{document.title='Labo Buddy RC59.5 検索修正版';const h=document.querySelector('header h1');if(h)h.textContent='🦷 Labo Buddy RC59'}catch(_){ }
     const vb=document.querySelector('.versionBox');if(vb)vb.innerHTML='🧑‍🔧 Labo Buddy RC59.5<br>検索安定化・自動保護版';
-    installSearch(); installSafety(); snapshot('起動時');
-    ['saveCase','del','saveClinic','deleteMetalTx','saveMetalUse','adjustMetalStockPrompt'].forEach(wrapMutation);
+    installSearch(); installSafety(); /* 容量対策: 起動時の大容量複製を停止 */
+    /* 容量対策: 保存操作ごとの全件複製を停止 */
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
   window.addEventListener('pageshow',()=>setTimeout(init,260));
-  setInterval(()=>snapshot('定期保護'),10*60*1000);
+  /* 容量対策: 定期的な全件複製を停止 */
 })();
 </script>
 
@@ -4870,5 +4870,30 @@ function rb(){
 }
 document.addEventListener('DOMContentLoaded',()=>setTimeout(rb,700));
 setTimeout(()=>{try{document.title='Labo Buddy RC61.31 浅井8月締め修正版';const h=document.querySelector('header h1');if(h)h.textContent='🦷 Labo Buddy RC61.31';const v=document.querySelector('.versionBox');if(v)v.innerHTML='🧑‍🔧 Labo Buddy RC61.31<br>浅井8月締め修正対応＋一覧セット日表示';}catch(_){}},500);
+})();
+</script>
+
+<script>
+/* 容量対策 RC61.27: 正本の患者・医院・金属・締め履歴には一切触れない。 */
+(function(){
+ function install(){
+   const box=document.getElementById('lb59SafetyBox');
+   if(!box||document.getElementById('lbStorageCleanup'))return;
+   const panel=document.createElement('div'); panel.id='lbStorageCleanup';
+   panel.style.cssText='border:2px solid #fbbf24;border-radius:14px;padding:12px;margin-top:12px;background:#fffbeb;color:#78350f';
+   panel.innerHTML='<b>📦 保存容量の整理</b><p style="font-size:13px;line-height:1.5">新しい全件自動コピーの作成を停止しました。容量を空ける場合は、先にJSONバックアップを「ファイル」アプリへ保存し、ファイルが実在することを確認してください。以下の操作は古い自動コピーのみを削除します。患者・医院・金属・締め履歴の正本は削除しません。</p><button type="button" class="btn sub" id="lbCleanSnapshots">バックアップ確認後、古い自動コピーを整理</button><p id="lbCleanupResult" style="font-size:12px"></p>';
+   box.appendChild(panel);
+   document.getElementById('lbCleanSnapshots').onclick=function(){
+     if(!confirm('JSONバックアップをiPhoneの「ファイル」アプリに保存し、ファイルを開けることを確認しましたか？ 未確認ならキャンセルしてください。'))return;
+     if(!confirm('古い自動保護コピーだけを削除します。自動保護からの復元はできなくなります。続けますか？'))return;
+     let removed=0;
+     try{if(localStorage.getItem('lb_rc59_auto_snapshots')!==null){localStorage.removeItem('lb_rc59_auto_snapshots');removed++}}
+     catch(e){alert('整理できませんでした: '+e.message);return}
+     document.getElementById('lbCleanupResult').textContent=removed?'古い自動コピーを整理しました。保存をもう一度試してください。':'整理対象の自動コピーはありませんでした。';
+     const state=document.getElementById('lb59SafetyState');if(state)state.textContent='全件自動コピーは容量対策のため停止中。JSONバックアップを定期的に保存してください。';
+   };
+   const state=document.getElementById('lb59SafetyState');if(state)state.insertAdjacentText('beforeend','（新規自動コピーは容量対策のため停止中）');
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,100));else setTimeout(install,100);
 })();
 </script>
