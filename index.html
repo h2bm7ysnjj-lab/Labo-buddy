@@ -4746,7 +4746,7 @@ function escO(v){try{return typeof esc==='function'?esc(v):String(v??'')}catch(_
 function yenO(v){try{return typeof yen==='function'?yen(Number(v)||0):'¥'+Math.round(Number(v)||0).toLocaleString('ja-JP')}catch(_){return '¥'+Math.round(Number(v)||0).toLocaleString('ja-JP')}}
 function histories(){try{const x=JSON.parse(localStorage.getItem(OUT_CLOSE_KEY)||'[]');return Array.isArray(x)?x:[]}catch(_){return []}}
 function saveHistories(x){localStorage.setItem(OUT_CLOSE_KEY,JSON.stringify(x))}
-function allCasesO(){try{if(Array.isArray(window.cases))return window.cases}catch(_){}try{if(Array.isArray(cases))return cases}catch(_){}return []}
+function allCasesO(){try{const saved=JSON.parse(localStorage.getItem('lb_rc1_cases')||'[]');if(Array.isArray(saved)){try{window.cases=saved;cases=saved}catch(_){}return saved}}catch(_){}try{if(Array.isArray(window.cases))return window.cases}catch(_){}try{if(Array.isArray(cases))return cases}catch(_){}return []}
 function namesO(){try{if(typeof outsourceNames==='function')return outsourceNames()}catch(_){}try{return (Array.isArray(outsources)?outsources:[]).map(x=>x&&x.name).filter(Boolean)}catch(_){return []}}
 function doneDateO(c){const raw=c&&(c.completedAt||c._doneSavedAt||c.doneAt||c.updatedAt);if(!raw)return '';const d=new Date(raw);return isNaN(d)?String(raw).slice(0,10):dateO(d)}
 function costO(c){if(c&&c.remake)return 0;try{return typeof outsourceCost==='function'?Number(outsourceCost(c)||0):Number(c&&c.outsourcePrice||0)}catch(_){return Number(c&&c.outsourcePrice||0)}}
@@ -4928,14 +4928,14 @@ setTimeout(()=>{try{document.title='Labo Buddy RC61.31 浅井8月締め修正版
 </script>
 
 <script>
-/* RC61.32 外注支払合計リアルタイム更新 */
+/* RC61.34 外注未完成即時反映修正 */
 (function(){
 'use strict';
 function refreshOutClose(){try{if(typeof window.renderOutsourceClosing==='function')window.renderOutsourceClosing()}catch(_){}}
 const prev=window.renderAll||(typeof renderAll==='function'?renderAll:null);
 if(typeof prev==='function'){window.renderAll=function(){const r=prev.apply(this,arguments);setTimeout(refreshOutClose,0);return r};try{renderAll=window.renderAll}catch(_){}}
-document.addEventListener('click',function(e){const t=e.target;if(t&&t.closest&&(t.closest('.statusBadge')||t.closest('[data-lb38="undo"]')||t.closest('[data-action="undo"]'))){setTimeout(refreshOutClose,80);setTimeout(refreshOutClose,700)}},true);
-function ver(){try{document.title='Labo Buddy RC61.32 外注合計連動版';const h=document.querySelector('header h1');if(h)h.textContent='🦷 Labo Buddy RC61.32';const v=document.querySelector('.versionBox');if(v)v.innerHTML='🧑‍🔧 Labo Buddy RC61.32<br>外注締め＋完了/未完成リアルタイム連動'}catch(_){}}
+document.addEventListener('click',function(e){const t=e.target;if(t&&t.closest&&(t.closest('.statusBadge')||t.closest('[data-lb49="status"]')||t.closest('[data-lb48="status"]')||t.closest('[data-lb43="status"]')||t.closest('[data-lb38="undo"]')||t.closest('[data-action="undo"]'))){setTimeout(refreshOutClose,80);setTimeout(refreshOutClose,700)}},true);
+function ver(){try{document.title='Labo Buddy RC61.34 外注未完成即時反映版';const h=document.querySelector('header h1');if(h)h.textContent='🦷 Labo Buddy RC61.34';const v=document.querySelector('.versionBox');if(v)v.innerHTML='🧑‍🔧 Labo Buddy RC61.34<br>外注締め＋未完成戻し即時反映'}catch(_){}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{refreshOutClose();ver()},1700));else setTimeout(()=>{refreshOutClose();ver()},1700);window.addEventListener('pageshow',()=>setTimeout(refreshOutClose,400));setTimeout(ver,3600);
 })();
 </script>
