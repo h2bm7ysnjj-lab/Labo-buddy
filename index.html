@@ -4916,3 +4916,40 @@ setTimeout(()=>{try{document.title='Labo Buddy RC61.31 浅井8月締め修正版
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,100));else setTimeout(install,100);
 })();
 </script>
+
+<!-- RC61.32 外注合計リアルタイム再描画修正 -->
+<script>
+(function(){
+'use strict';
+const VERSION='RC61.32';
+let refreshing=false;
+function refreshOutsourceTotals(){
+  if(refreshing)return;
+  refreshing=true;
+  try{ if(typeof renderOutsourceCases==='function') renderOutsourceCases(); }catch(_){ }
+  try{ if(typeof renderOutsourceClosing==='function') renderOutsourceClosing(); }catch(_){ }
+  refreshing=false;
+}
+const prevSummary=window.renderSummary || (typeof renderSummary==='function'?renderSummary:null);
+if(typeof prevSummary==='function'){
+  window.renderSummary=function(){const r=prevSummary.apply(this,arguments);setTimeout(refreshOutsourceTotals,0);return r;};
+  try{renderSummary=window.renderSummary}catch(_){ }
+}
+const prevAll=window.renderAll || (typeof renderAll==='function'?renderAll:null);
+if(typeof prevAll==='function'){
+  window.renderAll=function(){const r=prevAll.apply(this,arguments);setTimeout(refreshOutsourceTotals,0);return r;};
+  try{renderAll=window.renderAll}catch(_){ }
+}
+function mark(){
+  try{
+    document.title='Labo Buddy '+VERSION+' 外注合計連動修正版';
+    const h=document.querySelector('header h1');if(h)h.textContent='🦷 Labo Buddy '+VERSION;
+    const v=document.querySelector('.versionBox');if(v)v.innerHTML='🧑‍🔧 Labo Buddy '+VERSION+'<br>外注合計 完了⇄未完成リアルタイム連動';
+  }catch(_){ }
+}
+function init(){refreshOutsourceTotals();mark()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,1700),{once:true});else setTimeout(init,1700);
+window.addEventListener('pageshow',()=>setTimeout(refreshOutsourceTotals,350));
+setTimeout(mark,3600);
+})();
+</script>
