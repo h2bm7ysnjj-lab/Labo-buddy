@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Labo Buddy">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Labo Buddy RC61.31 アネラ外注費修正版 - 吉根10月フラット版</title>
+<title>Labo Buddy RC61.31 外注ボタン締め版 - RC61.30 吉根10月フラット版</title>
 <style>
 :root{--b:#2b7de9;--bg:#f4f7fb;--txt:#1f2937;--muted:#6b7280;--line:#d8e0ee;--green:#16a34a;--purple:#9333ea;--done:#eef0f3}
 *{box-sizing:border-box}
@@ -393,7 +393,6 @@ function setOutsourceActive(id){let c=cases.find(x=>x.id===id);if(!c||!isOutsour
 function outsourceActionBtn(c){if(!isOutsource(c)||c.status==='完了')return '';return outsourceFlow(c)==='戻り済'?`<button class="btn gray" onclick="setOutsourceActive('${c.id}')">↩️外注中へ</button>`:`<button class="btn sub" onclick="setOutsourceReturned('${c.id}')">📥戻ってきた</button>`}
 function outsourcePriceFor(c,w){let o=outsourceByName(assigneeOf(c));return Number(o?.prices?.[w]||0)}
 function outsourceCost(c){if(c&&c.remake)return 0;if(!isOutsource(c))return 0;let td=c.teethData||{}, tw=c.toothWorks||{};let keys=Object.keys(td);if(!keys.length)return outsourcePriceFor(c,c.workType)*Number(c.qty||1);return keys.reduce((s,t)=>{let w=tw[t]||(td[t]==='pontic'?'ポンティック':c.workType);return s+outsourcePriceFor(c,w)},0)}
-function fixOutsourceCostOnComplete(c){if(!c||!isOutsource(c))return;if(c.remake){c.outsourceCostFixed=0;return;}try{c.outsourceCostFixed=Number(outsourceCost(c)||0)}catch(_){c.outsourceCostFixed=0}}
 function outsourceProfit(c){return amount(c)-outsourceCost(c)}
 function renderOutsources(){ensureOutsourceWorkDatalist();let list=$('outsourceList');if(list){let names=outsourceNames();list.innerHTML=names.length?names.map(n=>{let o=outsourceByName(n), rows=(o?.priceMaster||[]).slice(0,6).map(x=>`${esc(x.name)} ${yen(x.price)}`).join(' / '), more=(o?.priceMaster||[]).length>6?` / 他${o.priceMaster.length-6}件`:'';return `<div class="item"><div class="itemInner"><h3>${esc(n)}</h3><p class="outsourceLead">${rows?rows+more:'単価未登録'}</p><div class="actions"><button class="btn sub" onclick="editOutsource('${esc(n)}')">編集</button><button class="btn danger" onclick="deleteOutsource('${esc(n)}')">削除</button></div></div></div>`}).join(''):'<div class="empty">外注先はまだ登録されていません</div>'}
  renderOutsourceCases();}
@@ -405,8 +404,8 @@ function diff(d){if(!d)return null;return Math.round((new Date(d+'T00:00:00')-ne
 function badge(d){let x=diff(d);if(x===null)return'';if(x<0)return`<span class="due over">${-x}日超過</span>`;if(x===0)return`<span class="due todayDue">今日</span>`;if(x===1)return`<span class="due tomorrow">明日</span>`;if(x<=3)return`<span class="due soon">あと${x}日</span>`;return`<span class="due later">あと${x}日</span>`}
 function statusBadge(c){let s=c.status||'未着手',cls=s==='完了'?'st2':s==='作業中'?'st1':'st0';return`<span class="statusBadge ${cls}" onclick="cycleStatus('${c.id}')">${s}</span>`}
 function shouldAskMetal(c){return !!(c&&metalNamesForClinic(c.clinic).length&&!hasMetalUse(c))}
-function cycleStatus(id){let c=cases.find(x=>x.id===id);if(!c)return;let prev=c.status||'未着手';let o=['未着手','作業中','完了'];c.status=o[(o.indexOf(prev)+1)%3];if(c.status==='完了'){c.completedAt=new Date().toISOString();fixOutsourceCostOnComplete(c);lastDone={id,prev,patient:c.patient};localStorage.setItem(CK,JSON.stringify(cases));showToast(`✅ ${c.patient} を完了にしました`);completeFlash(c);renderAll();checkClear();if(shouldAskMetal(c))setTimeout(()=>openMetalUse(id),250);}else{delete c.completedAt;save();}}
-function completeCase(id,el){let c=cases.find(x=>x.id===id);if(!c)return;let prev=c.status||'未着手';c.status='完了';c.completedAt=new Date().toISOString();fixOutsourceCostOnComplete(c);lastDone={id,prev,patient:c.patient};document.querySelectorAll('.item.swiping').forEach(x=>x.classList.remove('swiping'));if(el){el.classList.remove('swiping');el.classList.add('done','finishing')}localStorage.setItem(CK,JSON.stringify(cases));showToast(`✅ ${c.patient} を完了にしました`);completeFlash(c);setTimeout(()=>{renderAll();checkClear();if(shouldAskMetal(c))openMetalUse(id);},550)}
+function cycleStatus(id){let c=cases.find(x=>x.id===id);if(!c)return;let prev=c.status||'未着手';let o=['未着手','作業中','完了'];c.status=o[(o.indexOf(prev)+1)%3];if(c.status==='完了'){c.completedAt=new Date().toISOString();lastDone={id,prev,patient:c.patient};localStorage.setItem(CK,JSON.stringify(cases));showToast(`✅ ${c.patient} を完了にしました`);completeFlash(c);renderAll();checkClear();if(shouldAskMetal(c))setTimeout(()=>openMetalUse(id),250);}else{delete c.completedAt;save();}}
+function completeCase(id,el){let c=cases.find(x=>x.id===id);if(!c)return;let prev=c.status||'未着手';c.status='完了';c.completedAt=new Date().toISOString();lastDone={id,prev,patient:c.patient};document.querySelectorAll('.item.swiping').forEach(x=>x.classList.remove('swiping'));if(el){el.classList.remove('swiping');el.classList.add('done','finishing')}localStorage.setItem(CK,JSON.stringify(cases));showToast(`✅ ${c.patient} を完了にしました`);completeFlash(c);setTimeout(()=>{renderAll();checkClear();if(shouldAskMetal(c))openMetalUse(id);},550)}
 function undoComplete(){if(!lastDone)return;let c=cases.find(x=>x.id===lastDone.id);if(c){c.status=lastDone.prev||'作業中';delete c.completedAt;save()}$('toast').style.display='none';lastDone=null}
 function showToast(msg){$('toastText').textContent=msg;$('toast').style.display='flex';clearTimeout(toastTimer);toastTimer=setTimeout(()=>{$('toast').style.display='none';lastDone=null},5000)}
 function setMode(m){mode=m;$('mBase').classList.toggle('active',m==='base');$('mPontic').classList.toggle('active',m==='pontic')}
@@ -2178,7 +2177,7 @@ initCelebrateMode();applySettingsUI();makeTeeth();ensureWorkSelect();renderClini
     const wasDone=(list[i].status||'')==='完了';
     const c=Object.assign({},list[i]);
     c.status=status;
-    if(status==='完了'){ c.completedAt=new Date().toISOString(); try{if(typeof fixOutsourceCostOnComplete==='function')fixOutsourceCostOnComplete(c)}catch(_){} }
+    if(status==='完了') c.completedAt=new Date().toISOString();
     else c.completedAt='';
     list[i]=c; saveCases(list); refresh();
     if(status==='完了'){
@@ -4753,14 +4752,25 @@ function doneDateO(c){const raw=c&&(c.completedAt||c._doneSavedAt||c.doneAt||c.u
 function costO(c){if(c&&c.remake)return 0;try{return typeof outsourceCost==='function'?Number(outsourceCost(c)||0):Number(c&&c.outsourcePrice||0)}catch(_){return Number(c&&c.outsourcePrice||0)}}
 function naturalO(now=new Date()){const y=now.getFullYear(),m=now.getMonth();return {start:dateO(new Date(y,m,1)),end:dateO(new Date(y,m+1,0)),label:`${y}年${m+1}月分`}}
 function nextO(lastEnd){const start=addO(lastEnd,1),d=parseO(start);return {start,end:monthEndO(start),label:`${d.getFullYear()}年${d.getMonth()+1}月分`}}
-function rangeO(name){const h=histories().filter(x=>x.outsource===name).sort((a,b)=>String(a.periodEnd).localeCompare(String(b.periodEnd)));return h.length?nextO(h[h.length-1].periodEnd):naturalO()}
-function listO(name,r){return allCasesO().filter(c=>c&&c.status==='完了'&&!c.excludeSummary&&String(c.assignee||'自社')===name&&doneDateO(c)>=r.start&&doneDateO(c)<=r.end)}
+/* RC61.31: 外注支払はカレンダー月ではなく「締める」ボタンを押した瞬間で区切る。
+   過去の締めに caseIds が入った案件だけを締め済み扱いにし、それ以外の完成案件は日付をまたいでも現在分へ加算する。 */
+function rangeO(name){
+ const h=histories().filter(x=>x.outsource===name).sort((a,b)=>String(a.closedAt||'').localeCompare(String(b.closedAt||'')));
+ if(!h.length){const n=naturalO();return {start:'未締め',end:'現在',label:'現在の支払分'}}
+ const last=h[h.length-1],d=new Date(last.closedAt||'');
+ const start=isNaN(d)?String(last.periodEnd||'前回締め後'):dateO(d);
+ return {start:start,end:'現在',label:'前回締め後の支払分'}
+}
+function listO(name,r){
+ const closedIds=new Set(histories().filter(x=>x.outsource===name).flatMap(x=>Array.isArray(x.caseIds)?x.caseIds:[]));
+ return allCasesO().filter(c=>c&&c.status==='完了'&&!c.excludeSummary&&String(c.assignee||'自社')===name&&!closedIds.has(c.id))
+}
 function summaryO(list){let total=0,units=0;const works={};list.forEach(c=>{const cost=costO(c);total+=cost;let entries=[];try{entries=typeof toothWorkEntries==='function'?toothWorkEntries(c):[]}catch(_){}if(entries.length){entries.forEach(x=>{const w=String(x.work||c.workType||'その他');works[w]=(works[w]||0)+1;units++})}else{const q=Number(c.qty||1);works[String(c.workType||c.kind||'その他')]=(works[String(c.workType||c.kind||'その他')]||0)+q;units+=q}});return {total,units,works}}
 function rowsO(works){return Object.entries(works).map(([w,q])=>`<tr><td>${escO(w)}</td><td>${q}</td></tr>`).join('')}
-function cardO(name){const r=rangeO(name),list=listO(name,r),a=summaryO(list);return `<div class="lbOutCloseCard"><div class="lbOutCloseHead"><div><h4>📦 ${escO(name)}</h4><span class="lbPeriodPill">${escO(r.label)}　${r.start}〜${r.end}</span></div><span class="pill">${list.length}件</span></div><div class="lbOutAmount">${yenO(a.total)}</div><div class="lbOutMeta">支払予定額（税抜）／ ${a.units}本<br>締め後は、この外注先だけ翌月分へ切り替わります。</div>${list.length?`<div style="overflow:auto;margin-top:8px"><table><tr><th>技工物</th><th>本数</th></tr>${rowsO(a.works)}</table></div>`:'<div class="empty">この期間の完成済み外注データはまだありません</div>'}<button type="button" class="btn lbOutCloseBtn" onclick="closeOutsourcePeriod('${encodeURIComponent(name)}')" ${list.length?'':'disabled'}>📦 ${escO(r.label)}の支払を締める</button></div>`}
+function cardO(name){const r=rangeO(name),list=listO(name,r),a=summaryO(list);return `<div class="lbOutCloseCard"><div class="lbOutCloseHead"><div><h4>📦 ${escO(name)}</h4><span class="lbPeriodPill">${escO(r.label)}　${r.start}〜${r.end}</span></div><span class="pill">${list.length}件</span></div><div class="lbOutAmount">${yenO(a.total)}</div><div class="lbOutMeta">支払予定額（税抜）／ ${a.units}本<br>「締める」を押した瞬間までを確定し、その後の完成分は次回へ加算されます。</div>${list.length?`<div style="overflow:auto;margin-top:8px"><table><tr><th>技工物</th><th>本数</th></tr>${rowsO(a.works)}</table></div>`:'<div class="empty">この期間の完成済み外注データはまだありません</div>'}<button type="button" class="btn lbOutCloseBtn" onclick="closeOutsourcePeriod('${encodeURIComponent(name)}')" ${list.length?'':'disabled'}>📦 ${escO(r.label)}の支払を締める</button></div>`}
 function historyO(){const h=histories().slice().sort((a,b)=>String(b.closedAt).localeCompare(String(a.closedAt)));if(!h.length)return '<div class="lbOutHistory"><h4>📚 支払締め履歴</h4><div class="empty">支払締め履歴はまだありません</div></div>';return `<div class="lbOutHistory"><h4>📚 支払締め履歴</h4>${h.map(x=>`<div class="lbOutHistoryItem"><b>${escO(x.outsource)}・${escO(x.label)}</b><div class="lbOutHistoryAmount">${yenO(x.total)}</div><div class="lbOutMeta">${x.periodStart}〜${x.periodEnd} ／ ${x.caseCount}件・${x.units}本<br>締め確定：${new Date(x.closedAt).toLocaleString('ja-JP')}</div></div>`).join('')}</div>`}
-window.closeOutsourcePeriod=function(encoded){const name=decodeURIComponent(encoded),r=rangeO(name),list=listO(name,r),a=summaryO(list);if(!list.length)return alert('この期間に締める完成済み外注データはありません');const msg=`${name}の${r.label}の支払を締めます。\n\n期間：${r.start}〜${r.end}\n支払額（税抜）：${yenO(a.total)}\n${list.length}件・${a.units}本\n\n締めた金額は履歴に固定され、${name}だけ翌月分へ切り替わります。`;if(!confirm(msg))return;const h=histories();h.push({id:'outclose_'+Date.now().toString(36),outsource:name,label:r.label,periodStart:r.start,periodEnd:r.end,closedAt:new Date().toISOString(),caseIds:list.map(c=>c.id),caseCount:list.length,units:a.units,total:a.total,works:a.works});saveHistories(h);renderOutsourceClosing();try{showToast('✅ '+name+'の支払を締めました')}catch(_){alert('支払締めを保存しました')}};
-window.renderOutsourceClosing=function(){const tab=$o('outsourcing');if(!tab)return;let wrap=$o('lbOutCloseWrap');if(!wrap){wrap=document.createElement('div');wrap.id='lbOutCloseWrap';wrap.className='lbOutCloseWrap';const first=tab.querySelector('.card');if(first)first.insertBefore(wrap,first.firstChild);else tab.insertBefore(wrap,tab.firstChild)}const ns=namesO();wrap.innerHTML='<h3>💳 外注先の支払締め</h3><p class="lbOutCloseLead">医院の請求締めとは別管理です。締めると金額を固定し、その外注先だけ翌月分へ進みます。</p>'+(ns.length?ns.map(cardO).join(''):'<div class="empty">外注先が登録されていません</div>')+historyO()};
+window.closeOutsourcePeriod=function(encoded){const name=decodeURIComponent(encoded),r=rangeO(name),list=listO(name,r),a=summaryO(list);if(!list.length)return alert('この期間に締める完成済み外注データはありません');const msg=`${name}の${r.label}の支払を締めます。\n\n期間：${r.start}〜${r.end}\n支払額（税抜）：${yenO(a.total)}\n${list.length}件・${a.units}本\n\n締めた金額は履歴に固定され、このボタンを押した後に完成した分から次回の支払額へ加算されます。`;if(!confirm(msg))return;const h=histories();h.push({id:'outclose_'+Date.now().toString(36),outsource:name,label:r.label,periodStart:r.start,periodEnd:r.end,closedAt:new Date().toISOString(),caseIds:list.map(c=>c.id),caseCount:list.length,units:a.units,total:a.total,works:a.works});saveHistories(h);renderOutsourceClosing();try{showToast('✅ '+name+'の支払を締めました')}catch(_){alert('支払締めを保存しました')}};
+window.renderOutsourceClosing=function(){const tab=$o('outsourcing');if(!tab)return;let wrap=$o('lbOutCloseWrap');if(!wrap){wrap=document.createElement('div');wrap.id='lbOutCloseWrap';wrap.className='lbOutCloseWrap';const first=tab.querySelector('.card');if(first)first.insertBefore(wrap,first.firstChild);else tab.insertBefore(wrap,tab.firstChild)}const ns=namesO();wrap.innerHTML='<h3>💳 外注先の支払締め</h3><p class="lbOutCloseLead">医院の請求締めとは別管理です。日付では自動で切り替えず、「締める」ボタンを押した瞬間までを確定します。</p>'+(ns.length?ns.map(cardO).join(''):'<div class="empty">外注先が登録されていません</div>')+historyO()};
 const oldRenderOut=window.renderOutsources || (typeof renderOutsources==='function'?renderOutsources:null);
 if(typeof oldRenderOut==='function'){window.renderOutsources=function(){const r=oldRenderOut.apply(this,arguments);setTimeout(renderOutsourceClosing,0);return r};try{renderOutsources=window.renderOutsources}catch(_){}}
 const oldApplyOut=window.applyBackupData;
@@ -4914,74 +4924,5 @@ setTimeout(()=>{try{document.title='Labo Buddy RC61.31 浅井8月締め修正版
    const state=document.getElementById('lb59SafetyState');if(state)state.insertAdjacentText('beforeend','（新規自動コピーは容量対策のため停止中）');
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,100));else setTimeout(install,100);
-})();
-</script>
-
-<!-- RC61.32 外注合計リアルタイム再描画修正 -->
-<script>
-(function(){
-'use strict';
-const VERSION='RC61.32';
-let refreshing=false;
-function refreshOutsourceTotals(){
-  if(refreshing)return;
-  refreshing=true;
-  try{ if(typeof renderOutsourceCases==='function') renderOutsourceCases(); }catch(_){ }
-  try{ if(typeof renderOutsourceClosing==='function') renderOutsourceClosing(); }catch(_){ }
-  refreshing=false;
-}
-const prevSummary=window.renderSummary || (typeof renderSummary==='function'?renderSummary:null);
-if(typeof prevSummary==='function'){
-  window.renderSummary=function(){const r=prevSummary.apply(this,arguments);setTimeout(refreshOutsourceTotals,0);return r;};
-  try{renderSummary=window.renderSummary}catch(_){ }
-}
-const prevAll=window.renderAll || (typeof renderAll==='function'?renderAll:null);
-if(typeof prevAll==='function'){
-  window.renderAll=function(){const r=prevAll.apply(this,arguments);setTimeout(refreshOutsourceTotals,0);return r;};
-  try{renderAll=window.renderAll}catch(_){ }
-}
-function mark(){
-  try{
-    document.title='Labo Buddy '+VERSION+' 外注合計連動修正版';
-    const h=document.querySelector('header h1');if(h)h.textContent='🦷 Labo Buddy '+VERSION;
-    const v=document.querySelector('.versionBox');if(v)v.innerHTML='🧑‍🔧 Labo Buddy '+VERSION+'<br>外注合計 完了⇄未完成リアルタイム連動';
-  }catch(_){ }
-}
-function init(){refreshOutsourceTotals();mark()}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,1700),{once:true});else setTimeout(init,1700);
-window.addEventListener('pageshow',()=>setTimeout(refreshOutsourceTotals,350));
-setTimeout(mark,3600);
-})();
-</script>
-
-<!-- RC61.33 外注固定0円ループ修正 -->
-<script>
-(function(){
-'use strict';
-const VERSION='RC61.33';
-function masterPrice(c,w){
- try{
-  const name=String(c&&c.assignee||'自社').trim(); if(!name||name==='自社')return 0;
-  let o=null; try{o=typeof outsourceByName==='function'?outsourceByName(name):null}catch(_){}
-  if(!o){try{o=(Array.isArray(outsources)?outsources:[]).find(x=>String(x&&x.name||'').trim()===name)||null}catch(_){}}
-  if(!o)return 0; const target=String(w||'').trim();
-  if(o.prices&&Object.prototype.hasOwnProperty.call(o.prices,target))return Number(o.prices[target]||0);
-  const rows=Array.isArray(o.priceMaster)?o.priceMaster:[]; const exact=rows.find(x=>String(x&&x.name||'').trim()===target);
-  return exact?Number(exact.price||0):0;
- }catch(_){return 0}
-}
-function masterCost(c){
- if(!c||c.remake||String(c.assignee||'自社')==='自社')return 0;
- const td=c.teethData||{},tw=c.toothWorks||{},keys=Object.keys(td);
- if(!keys.length)return masterPrice(c,c.workType)*Math.max(1,Number(c.qty||1));
- return keys.reduce((sum,t)=>sum+masterPrice(c,tw[t]||(td[t]==='pontic'?'ポンティック':c.workType)),0);
-}
-window.fixOutsourceCostOnComplete=function(c){if(!c||String(c.assignee||'自社')==='自社')return;c.outsourceCostFixed=c.remake?0:Number(masterCost(c)||0)};
-try{fixOutsourceCostOnComplete=window.fixOutsourceCostOnComplete}catch(_){}
-window.outsourceCost=function(c){if(!c||c.remake||String(c.assignee||'自社')==='自社')return 0;if(c.outsourceCostFixed!==undefined&&c.outsourceCostFixed!==null&&c.outsourceCostFixed!=='')return Number(c.outsourceCostFixed||0);return Number(masterCost(c)||0)};
-try{outsourceCost=window.outsourceCost}catch(_){}
-function refresh(){try{if(typeof renderAll==='function')renderAll()}catch(_){}try{if(typeof renderSummary==='function')renderSummary()}catch(_){}try{if(typeof renderOutsourceCases==='function')renderOutsourceCases()}catch(_){}try{if(typeof renderOutsourceClosing==='function')renderOutsourceClosing()}catch(_){}}
-function mark(){try{document.title='Labo Buddy '+VERSION+' 外注0円固定修正版';const h=document.querySelector('header h1');if(h)h.textContent='🦷 Labo Buddy '+VERSION;const v=document.querySelector('.versionBox');if(v)v.innerHTML='🧑‍🔧 Labo Buddy '+VERSION+'<br>外注費 0円固定ループ修正'}catch(_){}}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{refresh();mark()},1800),{once:true});else setTimeout(()=>{refresh();mark()},1800);setTimeout(mark,3800);
 })();
 </script>
