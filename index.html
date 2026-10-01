@@ -4953,3 +4953,35 @@ window.addEventListener('pageshow',()=>setTimeout(refreshOutsourceTotals,350));
 setTimeout(mark,3600);
 })();
 </script>
+
+<!-- RC61.33 外注固定0円ループ修正 -->
+<script>
+(function(){
+'use strict';
+const VERSION='RC61.33';
+function masterPrice(c,w){
+ try{
+  const name=String(c&&c.assignee||'自社').trim(); if(!name||name==='自社')return 0;
+  let o=null; try{o=typeof outsourceByName==='function'?outsourceByName(name):null}catch(_){}
+  if(!o){try{o=(Array.isArray(outsources)?outsources:[]).find(x=>String(x&&x.name||'').trim()===name)||null}catch(_){}}
+  if(!o)return 0; const target=String(w||'').trim();
+  if(o.prices&&Object.prototype.hasOwnProperty.call(o.prices,target))return Number(o.prices[target]||0);
+  const rows=Array.isArray(o.priceMaster)?o.priceMaster:[]; const exact=rows.find(x=>String(x&&x.name||'').trim()===target);
+  return exact?Number(exact.price||0):0;
+ }catch(_){return 0}
+}
+function masterCost(c){
+ if(!c||c.remake||String(c.assignee||'自社')==='自社')return 0;
+ const td=c.teethData||{},tw=c.toothWorks||{},keys=Object.keys(td);
+ if(!keys.length)return masterPrice(c,c.workType)*Math.max(1,Number(c.qty||1));
+ return keys.reduce((sum,t)=>sum+masterPrice(c,tw[t]||(td[t]==='pontic'?'ポンティック':c.workType)),0);
+}
+window.fixOutsourceCostOnComplete=function(c){if(!c||String(c.assignee||'自社')==='自社')return;c.outsourceCostFixed=c.remake?0:Number(masterCost(c)||0)};
+try{fixOutsourceCostOnComplete=window.fixOutsourceCostOnComplete}catch(_){}
+window.outsourceCost=function(c){if(!c||c.remake||String(c.assignee||'自社')==='自社')return 0;if(c.outsourceCostFixed!==undefined&&c.outsourceCostFixed!==null&&c.outsourceCostFixed!=='')return Number(c.outsourceCostFixed||0);return Number(masterCost(c)||0)};
+try{outsourceCost=window.outsourceCost}catch(_){}
+function refresh(){try{if(typeof renderAll==='function')renderAll()}catch(_){}try{if(typeof renderSummary==='function')renderSummary()}catch(_){}try{if(typeof renderOutsourceCases==='function')renderOutsourceCases()}catch(_){}try{if(typeof renderOutsourceClosing==='function')renderOutsourceClosing()}catch(_){}}
+function mark(){try{document.title='Labo Buddy '+VERSION+' 外注0円固定修正版';const h=document.querySelector('header h1');if(h)h.textContent='🦷 Labo Buddy '+VERSION;const v=document.querySelector('.versionBox');if(v)v.innerHTML='🧑‍🔧 Labo Buddy '+VERSION+'<br>外注費 0円固定ループ修正'}catch(_){}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{refresh();mark()},1800),{once:true});else setTimeout(()=>{refresh();mark()},1800);setTimeout(mark,3800);
+})();
+</script>
