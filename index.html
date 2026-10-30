@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Labo Buddy">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Labo Buddy RC61.31 外注ボタン締め版 - RC61.30 吉根10月フラット版</title>
+<title>Labo Buddy RC61.32 締めボタン境界版</title>
 <style>
 :root{--b:#2b7de9;--bg:#f4f7fb;--txt:#1f2937;--muted:#6b7280;--line:#d8e0ee;--green:#16a34a;--purple:#9333ea;--done:#eef0f3}
 *{box-sizing:border-box}
@@ -4655,7 +4655,7 @@ body.theme-dark .lbClinicInvoice{background:#111827;border-color:#334155}.body.t
 <script>
 (function(){
 'use strict';
-const VERSION='RC61.29';
+const VERSION='RC61.32';
 const CLOSE_KEY='lb_invoice_closings_v1';
 const gid=id=>document.getElementById(id);
 const pad=n=>String(n).padStart(2,'0');
@@ -4680,41 +4680,40 @@ function naturalRange(name,now=new Date()){
 function nextRangeAfter(name,lastEnd){const cd=closeDay(name),start=addDay(lastEnd,1),d=parseDate(start);if(cd>=28)return {start,end:endMonth(start),label:`${d.getFullYear()}年${d.getMonth()+1}月分`};const end=new Date(d.getFullYear(),d.getMonth()+(d.getDate()>cd?1:0),cd);return {start,end:dateStr(end),label:`${end.getFullYear()}年${end.getMonth()+1}月分`}}
 function closedLocalDate(x){const d=new Date(x&&x.closedAt||'');return isNaN(d)?String(x&&x.periodEnd||'').slice(0,10):dateStr(d)}
 function currentRange(name){
- const hs=closings().filter(x=>x.clinic===name).sort((a,b)=>String(a.closedAt||a.periodEnd).localeCompare(String(b.closedAt||b.periodEnd)));
- /* RC61.30: 吉根だけ10/1からフラット再開。過去の締め履歴は削除・改変しない。 */
- if(String(name).includes('吉根')){
-   const fresh=hs.filter(x=>String(x.periodStart||'')>=YOSHINE_FLAT_START);
-   if(!fresh.length)return {start:'2026-10-01',end:'2026-10-31',label:'2026年10月分'};
-   const last=fresh[fresh.length-1];
-   return nextRangeAfter(name,last.periodEnd);
- }
- if(!hs.length)return naturalRange(name);
- const last=hs[hs.length-1],nominal=nextRangeAfter(name,last.periodEnd);
- /* 浅井は従来仕様を維持。 */
- const actualStart=addDay(closedLocalDate(last),1);
- if(actualStart<nominal.start)nominal.start=actualStart;
- return nominal;
+ const hs=closings().filter(x=>x.clinic===name).sort((a,b)=>String(a.closedAt||'').localeCompare(String(b.closedAt||'')));
+ if(!hs.length)return {start:'未締め',end:'現在',label:'現在の請求分'};
+ const last=hs[hs.length-1],d=new Date(last.closedAt||'');
+ const s=isNaN(d)?'前回締め後':d.toLocaleDateString('ja-JP');
+ return {start:s,end:'現在',label:'前回締め後の請求分'};
 }
 function entries2(c){try{return typeof toothWorkEntries==='function'?toothWorkEntries(c):[]}catch(_){return []}}
 function out2(c){if(c&&c.remake)return 0;try{return typeof outsourceCost==='function'?Number(outsourceCost(c)||0):0}catch(_){return Number(c&&c.outsourcePrice||0)}}
 function calc(list){let total=0,out=0,units=0;const works={};list.forEach(c=>{entries2(c).forEach(x=>{const a=c.remake?0:Number(x.price||0),w=String(x.work||c.workType||'その他');works[w]??={q:0,a:0};works[w].q++;works[w].a+=a;total+=a;units++});out+=out2(c)});return {total,out,profit:total-out,units,works}}
+const YOSHINE_BASE_TARGET=258510;
+const YOSHINE_BASE_IDS=new Set(["muggb207", "muggbzrv", "muggkz28", "mukrkmuw", "mukrlvvg", "mukrnkly", "mukroh4m", "mukrpy39", "munmhe61", "munmiihs", "mup0zuoa", "muqhbcdl", "muuth6r0", "muuti47y", "muutjgxz", "muutkmbh", "muutlc9v", "muutm7g0", "muutmxg3", "muutoxlo", "muuttkzo", "muw6d0vm", "muw6dv8s", "muw6ekh3", "muw6fme0", "muz0b6de", "muz0cdip", "muz0djev", "mv1vkgfx", "mv1vlgz0", "mv4lrwva", "mv6vop0z", "mv6w0lf3", "mv6w294g", "mv6w363q", "mv6w4g7j", "mv6w57zq", "mv6w6qra", "mvak3apv", "mvaunxc8", "mvaup0fy", "mvespk89", "mvesqpnp", "mvesscff", "mvestnbl", "mvesuvbg", "mvesx1px", "mvet04jr", "mvet17kd", "mvet2kah", "mvet3hlf", "mvet4ccn", "mvet5br0", "mvg6isyb", "mvg6jq75", "mvg6lhjd", "mvg6mdb1", "mvj1i4pe", "mvj1k11f", "mvj1lnmb", "mvj1mjq6", "mvkew475", "mvkex14h", "mvkeykgi", "mvkf2mz1", "mvlxipkj", "mvotbwek", "mvotdrlb", "mvotei35", "mvotfkd7"]);
 function casesIn(name,r){
  const alreadyClosed=new Set(closings().filter(x=>x.clinic===name).flatMap(x=>Array.isArray(x.caseIds)?x.caseIds:[]));
- return allCases().filter(c=>{
-   if(!(c&&c.status==='完了'&&!c.excludeSummary&&String(c.clinic||'')===name&&!alreadyClosed.has(c.id)))return false;
-   /* RC61.30: 吉根は請求所属をセット日で固定。完了し直しても請求月は動かない。 */
-   const d=String(name).includes('吉根')?String(c.dueDate||''):doneDate(c);
-   return d>=r.start&&d<=r.end;
- })
+ return allCases().filter(c=>c&&c.status==='完了'&&!c.excludeSummary&&String(c.clinic||'')===name&&!alreadyClosed.has(c.id));
+}
+function calcInvoice(name,list){
+ const a=calc(list);
+ if(!String(name).includes('吉根'))return a;
+ const hasNewBoundaryClose=closings().some(x=>x.clinic===name&&x.buttonBoundaryV2);
+ if(hasNewBoundaryClose)return a;
+ const baseList=list.filter(c=>YOSHINE_BASE_IDS.has(c.id));
+ const baseRaw=calc(baseList).total;
+ const correction=YOSHINE_BASE_TARGET-baseRaw;
+ if(correction){a.total+=correction;a.profit+=correction;a.works['開始時補正']={q:0,a:correction};}
+ return a;
 }
 function clinicNames(){const s=new Set();allClinics().forEach(c=>{if(c&&c.name)s.add(String(c.name))});allCases().forEach(c=>{if(c&&c.clinic)s.add(String(c.clinic))});return [...s].filter(Boolean).sort((a,b)=>{const aa=a.includes('吉根')?0:a.includes('浅井')?1:2,bb=b.includes('吉根')?0:b.includes('浅井')?1:2;return aa-bb||a.localeCompare(b,'ja')})}
 function canClose(name,r){return true}
 function renderWorkRows(works){return Object.entries(works).sort((a,b)=>b[1].a-a[1].a).map(([k,v])=>`<tr><td>${esc2(k)}</td><td>${v.q}</td><td class="money">${yen2(v.a)}</td></tr>`).join('')}
-function clinicCard(name){const r=currentRange(name),list=casesIn(name,r),a=calc(list),closedBefore=closings().some(x=>x.clinic===name);const btnText=list.length?`📄 ${r.label}を締める`:`${r.label}はまだ0件`;
- return `<div class="lbClinicInvoice ${closedBefore?'closedNext':''}"><div class="lbClinicInvoiceHead"><div><h3>🏥 ${esc2(name)}</h3><span class="lbPeriodPill">${esc2(r.label)}　${r.start}〜${r.end}</span></div><span class="pill">${list.length}件</span></div><div class="lbInvoiceAmount">${yen2(a.total)}</div><div class="lbInvoiceSub">税込 ${yen2(tax2(a.total))} ／ ${a.units}本 ／ 外注費 ${yen2(a.out)} ／ 粗利益 ${yen2(a.profit)}</div>${list.length?`<div style="overflow:auto;margin-top:10px"><table><tr><th>技工物</th><th>本数</th><th>税抜</th></tr>${renderWorkRows(a.works)}</table></div>`:'<div class="empty">この請求期間の完成データはまだありません</div>'}<button type="button" class="btn lbCloseBtn" onclick="closeInvoicePeriod('${encodeURIComponent(name)}')" ${!list.length?'disabled':''}>${btnText}</button>${list.length?`<div class="lbInvoiceSub" style="margin-top:6px">締め日前でも必要な日に締められます。締めた翌日から次回分へ切り替わります。</div>`:''}</div>`}
+function clinicCard(name){const r=currentRange(name),list=casesIn(name,r),a=calcInvoice(name,list),closedBefore=closings().some(x=>x.clinic===name);const btnText=list.length?`📄 ${r.label}を締める`:`${r.label}はまだ0件`;
+ return `<div class="lbClinicInvoice ${closedBefore?'closedNext':''}"><div class="lbClinicInvoiceHead"><div><h3>🏥 ${esc2(name)}</h3><span class="lbPeriodPill">${esc2(r.label)}　${r.start}〜${r.end}</span></div><span class="pill">${list.length}件</span></div><div class="lbInvoiceAmount">${yen2(a.total)}</div><div class="lbInvoiceSub">税込 ${yen2(tax2(a.total))} ／ ${a.units}本 ／ 外注費 ${yen2(a.out)} ／ 粗利益 ${yen2(a.profit)}</div>${list.length?`<div style="overflow:auto;margin-top:10px"><table><tr><th>技工物</th><th>本数</th><th>税抜</th></tr>${renderWorkRows(a.works)}</table></div>`:'<div class="empty">この請求期間の完成データはまだありません</div>'}<button type="button" class="btn lbCloseBtn" onclick="closeInvoicePeriod('${encodeURIComponent(name)}')" ${!list.length?'disabled':''}>${btnText}</button>${list.length?`<div class="lbInvoiceSub" style="margin-top:6px">「締める」を押した瞬間までを確定し、その後の完成分は次回へ加算されます。</div>`:''}</div>`}
 function historyHtml(){const h=closings().slice().sort((a,b)=>String(b.closedAt).localeCompare(String(a.closedAt)));if(!h.length)return '<div class="lbHistory"><h3>📚 締め履歴</h3><div class="empty">締め履歴はまだありません</div></div>';return `<div class="lbHistory"><h3>📚 締め履歴</h3>${h.map(x=>{const net=Number(x.total||0),gross=Number(x.taxTotal||tax2(net)),tax=Math.max(0,gross-net);return `<div class="lbHistoryItem"><b>${esc2(x.clinic)}・${esc2(x.label)}</b><div class="lbHistoryAmount">${yen2(gross)}</div><div class="lbHistoryMeta"><b>請求額（税込）</b> ／ 税抜 ${yen2(net)} ／ 消費税 ${yen2(tax)}<br>${x.periodStart}〜${x.periodEnd} ／ ${x.caseCount}件・${x.units}本<br>締め確定：${new Date(x.closedAt).toLocaleString('ja-JP')}</div></div>`}).join('')}</div>`}
-window.closeInvoicePeriod=function(encoded){const name=decodeURIComponent(encoded),r=currentRange(name),list=casesIn(name,r),a=calc(list);if(!list.length)return alert('この期間に締める完成データはありません');const scheduled=dateStr(parseDate(r.end)),todayStr=dateStr(new Date()),early=todayStr<scheduled?`\n⚠️ 本来の締め日（${scheduled}）より前ですが、この時点で確定します。\n`:'';const msg=`${name}の${r.label}を締めます。${early}\n\n期間：${r.start}〜${r.end}\n税抜：${yen2(a.total)}\n税込：${yen2(tax2(a.total))}\n${list.length}件・${a.units}本\n\n締めた金額は履歴に固定され、画面は次回請求分へ切り替わります。`;if(!confirm(msg))return;const h=closings();h.push({id:'close_'+Date.now().toString(36),clinic:name,label:r.label,periodStart:r.start,periodEnd:r.end,closedAt:new Date().toISOString(),caseIds:list.map(c=>c.id),caseCount:list.length,units:a.units,total:a.total,taxTotal:tax2(a.total),outsource:a.out,profit:a.profit,works:a.works});saveClosings(h);renderInvoiceSummary();try{showToast('✅ '+name+'の'+r.label+'を締めました')}catch(_){alert('締めを保存しました')}};
-window.renderInvoiceSummary=function(){const box=gid('summaryBox');if(!box)return;const names=clinicNames();box.innerHTML='<div class="lbCloseIntro">🧾 医院ごとに締め期間を独立管理します。<br>締めると、その期間の金額を履歴へ固定し、同じ医院だけ次回請求分へ切り替わります。</div>'+(names.length?names.map(clinicCard).join(''):'<div class="empty">取引先がありません</div>')+historyHtml()};
+window.closeInvoicePeriod=function(encoded){const name=decodeURIComponent(encoded),r=currentRange(name),list=casesIn(name,r),a=calcInvoice(name,list);if(!list.length)return alert('締める完成データはありません');const msg=`${name}の現在分を締めます。\n\n税抜：${yen2(a.total)}\n税込：${yen2(tax2(a.total))}\n${list.length}件・${a.units}本\n\nこのボタンを押した瞬間までの完成分を確定します。締めた後に完成した分は次回へ加算されます。`;if(!confirm(msg))return;const now=new Date(),h=closings();h.push({id:'close_'+Date.now().toString(36),clinic:name,label:new Intl.DateTimeFormat('ja-JP',{year:'numeric',month:'numeric',day:'numeric'}).format(now)+'締め',periodStart:r.start,periodEnd:'ボタン締め',closedAt:now.toISOString(),buttonBoundaryV2:true,caseIds:list.map(c=>c.id),caseCount:list.length,units:a.units,total:a.total,taxTotal:tax2(a.total),outsource:a.out,profit:a.profit,works:a.works});saveClosings(h);renderInvoiceSummary();try{showToast('✅ '+name+'を締めました')}catch(_){alert('締めを保存しました')}};
+window.renderInvoiceSummary=function(){const box=gid('summaryBox');if(!box)return;const names=clinicNames();box.innerHTML='<div class="lbCloseIntro">🧾 日付では区切らず、「締める」を押した瞬間で医院ごとに確定します。<br>締めた案件だけ履歴へ固定し、その後の完成分は次回へ加算されます。</div>'+(names.length?names.map(clinicCard).join(''):'<div class="empty">取引先がありません</div>')+historyHtml()};
 window.renderSummary=window.renderInvoiceSummary;try{renderSummary=window.renderInvoiceSummary}catch(_){}
 /* バックアップに締め履歴も含める */
 window.exportBackup=function(){const data={app:'Labo Buddy',version:VERSION,exportedAt:new Date().toISOString(),cases:allCases(),clinics:allClinics(),workOrder:(typeof workOrder!=='undefined'?workOrder:[]),metalTx:(typeof metalTx!=='undefined'?metalTx:[]),outsources:(typeof outsources!=='undefined'?outsources:[]),celebrateMode:(typeof getCelebrateMode==='function'?getCelebrateMode():'firework'),settings:(typeof getSettings==='function'?getSettings():{}),invoiceClosings:closings(),outsourceClosings:(()=>{try{const x=JSON.parse(localStorage.getItem('lb_outsource_closings_v1')||'[]');return Array.isArray(x)?x:[]}catch(_){return []}})()};const txt=JSON.stringify(data,null,2),blob=new Blob([txt],{type:'application/json'}),a=document.createElement('a'),d=new Date();a.href=URL.createObjectURL(blob);a.download=`labo-buddy-backup-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);const s=gid('backupStatus');if(s)s.textContent='バックアップファイルを作成しました（締め履歴も保存済み）。'};try{exportBackup=window.exportBackup}catch(_){}
@@ -4938,4 +4937,4 @@ document.addEventListener('click',function(e){const t=e.target;if(t&&t.closest&&
 function ver(){try{document.title='Labo Buddy RC61.34 外注未完成即時反映版';const h=document.querySelector('header h1');if(h)h.textContent='🦷 Labo Buddy RC61.34';const v=document.querySelector('.versionBox');if(v)v.innerHTML='🧑‍🔧 Labo Buddy RC61.34<br>外注締め＋未完成戻し即時反映'}catch(_){}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{refreshOutClose();ver()},1700));else setTimeout(()=>{refreshOutClose();ver()},1700);window.addEventListener('pageshow',()=>setTimeout(refreshOutClose,400));setTimeout(ver,3600);
 })();
-</script>
+</script>\n<script>\n/* RC61.32 金属台帳一本化パッチ：症例IDを唯一キーにして二重計上を防止 */\n(function(){\n 'use strict';\n const MK='lb_rc31_metal_tx', CK='lb_rc1_cases';\n const arr=v=>Array.isArray(v)?v:[];\n const read=(k,d=[])=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(_){return d}};\n const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));\n const norm=m=>{try{return typeof window.normMetal==='function'?window.normMetal(m):String(m||'').trim()}catch(_){return String(m||'').trim()}};\n function canonicalize(){\n   const cs=arr((window.cases&&window.cases.length)?window.cases:read(CK,[]));\n   const old=arr((window.metalTx&&window.metalTx.length)?window.metalTx:read(MK,[]));\n   // 入庫・手動訂正はそのまま保存。患者使用は症例データから必ず1件だけ再構築する。\n   const keep=old.filter(t=>(t.type||'use')!=='use' && !t.caseId);\n   const oldUse=new Map(old.filter(t=>(t.type||'use')==='use'&&t.caseId).map(t=>[String(t.caseId),t]));\n   const use=[];\n   const seen=new Set();\n   cs.forEach(c=>{\n     if(!c||!c.id||seen.has(String(c.id)))return; seen.add(String(c.id));\n     const metal=norm(c.metal||'なし'), g=Number(c.grams||0);\n     if(!metal||metal==='なし'||!Number.isFinite(g)||g<=0)return;\n     const prev=oldUse.get(String(c.id));\n     use.push({id:'use_'+c.id,date:(prev&&prev.date)||String(c.completedAt||c.createdAt||c.dueDate||'').slice(0,10)||new Date().toISOString().slice(0,10),type:'use',clinic:c.clinic||'',patient:c.patient||'',metal,grams:Math.round(g*10)/10,caseId:c.id,memo:(c.workType||'技工物')+'で使用'});\n   });\n   const next=keep.concat(use);\n   write(MK,next);\n   try{window.metalTx=next;metalTx=next}catch(_){}\n   return next;\n }\n window.syncMetalHistoryFromCases=canonicalize;\n try{syncMetalHistoryFromCases=canonicalize}catch(_){}\n // 保存直前・表示直前にも台帳を正規化。古い二重useを残さない。\n const oldRender=window.renderMetal;\n if(typeof oldRender==='function')window.renderMetal=function(){canonicalize();return oldRender.apply(this,arguments)};\n // バックアップにも正規化済み台帳を入れる。\n const oldExport=window.exportBackup;\n if(typeof oldExport==='function')window.exportBackup=function(){canonicalize();return oldExport.apply(this,arguments)};\n function init(){canonicalize();try{document.title='Labo Buddy RC61.32 金属台帳一本化版';const h=document.querySelector('header h1');if(h)h.textContent='🦷 Labo Buddy RC61.32'}catch(_){ }try{if(typeof window.renderAll==='function')window.renderAll()}catch(_){ }}\n if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(init,80),{once:true});else setTimeout(init,80);\n window.addEventListener('pageshow',()=>setTimeout(canonicalize,180));\n})();\n</script>\n
